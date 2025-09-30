@@ -1,5 +1,4 @@
-import app from "./app.js"
-import "./models/index.js"
+import app from "./src/app"
 
 const port = 3001
 
