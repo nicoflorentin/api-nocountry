@@ -1,25 +1,31 @@
 {
-	"name": "nocountry",
-	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
-	"type": "module",
-	"scripts": {
-		"dev": "nodemon src/index.js",
-		"dev:local": "cross-env NODE_ENV=local node src/index.js",
-		"start": "node src/index.js",
-		"test": "jest"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"dependencies": {
-		"cors": "^2.8.5",
-		"express": "^4.18.2",
-		"jsonwebtoken": "^9.0.0",
-		"morgan": "^1.10.0"
-	},
-	"devDependencies": {
-		"nodemon": "^2.0.22"
-	}
+  "name": "nocountry",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.6.0",
+    "nodemon": "^2.0.22",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.2"
+  }
 }
