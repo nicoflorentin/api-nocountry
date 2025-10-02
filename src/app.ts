@@ -1,8 +1,16 @@
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
+import { router } from "./routes";
+import { initDB } from "./database/db_connection";
 
-const app = express();
+export const app = express();
+
+// Inicializar la base de datos
+initDB().catch(error => {
+  console.error("Failed to initialize database:", error);
+  process.exit(1); // Salir si no se puede inicializar la base de datos
+});
 
 // CORS primero
 const corsOptions = {
@@ -17,5 +25,8 @@ app.use(cors(corsOptions));
 
 // Logging
 app.use(morgan("dev"));
+app.use(router)
+// Test endpoint
+
 
 export default app;
