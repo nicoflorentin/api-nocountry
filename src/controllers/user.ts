@@ -2,7 +2,11 @@ import { Request, Response } from "express";
 import { makeUserService } from "../services/user";
 import { User } from "../models/user";
 
-const userService = makeUserService();
+let userService: Awaited<ReturnType<typeof makeUserService>>;
+
+(async () => {
+  userService = await makeUserService();
+})()
 
 export const getUserByID = async (req: Request, res: Response) => {
   const id = req.params.id;
