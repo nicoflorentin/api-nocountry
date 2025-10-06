@@ -29,5 +29,4 @@ export const user = Router();
  *       404:
  *         description: Usuario no encontrado
  */
-
 user.get("/:id", getUserByID);
