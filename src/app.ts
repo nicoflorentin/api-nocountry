@@ -24,6 +24,15 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Documentación generada con Swagger para Express",
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
     servers: [
       {
         url: "http://localhost:3001",

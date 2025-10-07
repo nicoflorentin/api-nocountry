@@ -35,3 +35,14 @@ export const login = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export const currentUser = async (req: Request, res: Response) => {
+  try {
+    const user = res.locals.user as User;
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

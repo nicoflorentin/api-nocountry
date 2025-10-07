@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { login } from "../controllers/auth";
+import { currentUser, login } from "../controllers/auth";
+import { authMiddleware } from "../middleware/auth";
 
 export const auth = Router();
 
@@ -29,3 +30,19 @@ export const auth = Router();
  *         description: Usuario no encontrado
  */
 auth.post("/login", login);
+
+/**
+ * @swagger
+ * /api/auth/current_user:
+ *   get:
+ *     summary: Usuario logueado
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Usuario encontrado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+auth.get("/current_user", authMiddleware, currentUser);
