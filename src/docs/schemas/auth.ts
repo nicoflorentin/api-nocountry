@@ -1,0 +1,21 @@
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     LoginCredentials:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "user@example.com"
+ *         password:
+ *           type: string
+ *           format: password
+ *           example: "MiContraseña123!"
+ */
+
+

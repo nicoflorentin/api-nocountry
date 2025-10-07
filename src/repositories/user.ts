@@ -1,4 +1,4 @@
-import { User } from "../models/user";
+import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
 
@@ -38,11 +38,11 @@ export async function makeUserRepository() {
       }
     },
 
-    async createUser(user: Omit<User, 'id'>): Promise<User> {
+    async createUser(user: UserCreate): Promise<User> {
       try {
         const [result] = await connection.execute<mysql.ResultSetHeader>(
-          "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-          [user.name, user.email, user.password]
+          "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
+          [user.firstName, user.lastName, user.email, user.password]
         );
         
         const [newUser] = await connection.execute<mysql.RowDataPacket[]>(
