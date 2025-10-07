@@ -32,12 +32,13 @@ const swaggerOptions = {
   },
   apis: [
     path.join(__dirname, "./routes/**/*.ts"),
-    path.join(__dirname, "./routes/**/*.js")
+    path.join(__dirname, "./docs/schemas/*.ts")
   ],
 };
 
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
 
+app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // CORS primero
