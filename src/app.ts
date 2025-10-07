@@ -24,6 +24,15 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Documentación generada con Swagger para Express",
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
     servers: [
       {
         url: "http://localhost:3001",
@@ -32,12 +41,13 @@ const swaggerOptions = {
   },
   apis: [
     path.join(__dirname, "./routes/**/*.ts"),
-    path.join(__dirname, "./routes/**/*.js")
+    path.join(__dirname, "./docs/schemas/*.ts")
   ],
 };
 
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
 
+app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // CORS primero
