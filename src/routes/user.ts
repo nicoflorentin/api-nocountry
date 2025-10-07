@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserByID } from "../controllers/user";
+import { createUser, getUserByID } from "../controllers/user";
 
 export const user = Router();
 
@@ -30,3 +30,23 @@ export const user = Router();
  *         description: Usuario no encontrado
  */
 user.get("/:id", getUserByID);
+
+/**
+ * @swagger
+ * /api/user/create:
+ *   post:
+ *     summary: Crear usuario paciente
+ *     tags: [User]
+ *     requestBody:
+ *        required: true
+ *        content:
+ *          application/json:
+ *            schema:
+ *              $ref: '#/components/schemas/UserCreate'
+ *     responses:
+ *       200:
+ *         description: Usuario encontrado
+ *       404:
+ *         description: Usuario no encontrado
+ */
+user.post("/create", createUser);

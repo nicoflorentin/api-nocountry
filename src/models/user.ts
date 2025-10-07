@@ -12,6 +12,14 @@ export interface User {
   updated_at?: Date;
 }
 
+export interface UserResponse {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  created_at?: Date;
+}
+
 const passwordRegex =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>/?]).{8,}$/;
 
