@@ -8,10 +8,10 @@
  *         - email
  *         - password
  *       properties:
- *         fist_name:
+ *         firstName:
  *           type: string
  *           example: "John"
- *         last_name:
+ *         lastName:
  *           type: string
  *           example: "Doe"
  *         email:
@@ -22,7 +22,7 @@
  *           type: string
  *           format: password
  *           example: "MiContraseña123!"
- *         repeat_password:
+ *         repeatPassword:
  *           type: string
  *           format: password
  *           example: "MiContraseña123!"

@@ -8,8 +8,8 @@ export interface User {
   email: string;
   password: string;
   role: string;
-  created_at?: Date;
-  updated_at?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface UserResponse {
@@ -17,7 +17,7 @@ export interface UserResponse {
   firstName: string;
   lastName: string;
   email: string;
-  created_at?: Date;
+  createdAt?: Date;
 }
 
 const passwordRegex =
