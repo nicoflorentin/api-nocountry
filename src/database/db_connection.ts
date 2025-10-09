@@ -10,7 +10,8 @@ const initialConfig = {
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  port: parseInt(process.env.DB_PORT || '3306')
 };
 
 const DB_NAME = process.env.DB_NAME || 'nocountry';
