@@ -1,5 +1,4 @@
 import z from "zod";
-import { fi } from "zod/v4/locales";
 
 export interface User {
   id: number;
