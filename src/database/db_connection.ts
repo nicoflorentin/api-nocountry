@@ -46,7 +46,7 @@ async function initializeDatabase() {
           email VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
           url_image VARCHAR(255),
-          is_active BOOLEAN DEFAULT TRUE,
+          is_active BOOLEAN DEFAULT FALSE,
           last_login TIMESTAMP NULL,
           role ENUM('paciente','medico','admin') NOT NULL DEFAULT 'paciente',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -88,15 +88,14 @@ async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS patients (
           id INT PRIMARY KEY AUTO_INCREMENT,
           user_id INT NOT NULL,
-          date_of_birth DATE,
+          date_of_birth DATE NOT NULL,
           gender ENUM('male','female','other') DEFAULT 'other',
-          dni VARCHAR(20),
-          blood_type ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NULL,
+          dni VARCHAR(20) NOT NULL UNIQUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-      `,
+          )
+          `,
       health_summaries: `
         CREATE TABLE IF NOT EXISTS health_summaries (
           id INT PRIMARY KEY AUTO_INCREMENT,
@@ -107,6 +106,7 @@ async function initializeDatabase() {
           weight DECIMAL(5,2),
           systolic_pressure INT,
           diastolic_pressure INT,
+          blood_type ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (patient_id) REFERENCES patients(id)
@@ -239,4 +239,3 @@ export const testConnection = async () => {
   }
 };
 
-export default getPool;
