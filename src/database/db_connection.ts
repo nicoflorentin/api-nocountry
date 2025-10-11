@@ -10,7 +10,8 @@ const initialConfig = {
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // port: parseInt(process.env.DB_PORT || '3306')
 };
 
 const DB_NAME = process.env.DB_NAME || 'nocountry';
@@ -41,14 +42,139 @@ async function initializeDatabase() {
           id INT PRIMARY KEY AUTO_INCREMENT,
           first_name VARCHAR(255) NOT NULL,
           last_name VARCHAR(255) NOT NULL,
+          phone VARCHAR(50),
           email VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
-          role VARCHAR(255) DEFAULT("paciente") NOT NULL,
+          url_image VARCHAR(255),
+          is_active BOOLEAN DEFAULT FALSE,
+          last_login TIMESTAMP NULL,
+          role ENUM('paciente','medico','admin') NOT NULL DEFAULT 'paciente',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
-      `
-      // Agrega más tablas aquí si es necesario
+      `,
+      specialties: `
+        CREATE TABLE IF NOT EXISTS specialties (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          description VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )`,
+      doctors: `
+            CREATE TABLE IF NOT EXISTS doctors (
+              id INT PRIMARY KEY AUTO_INCREMENT,
+              user_id INT NOT NULL,
+              specialty_id INT NOT NULL,
+              license_number VARCHAR(50) NOT NULL,
+              bio TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users(id),
+              FOREIGN KEY (specialty_id) REFERENCES specialties(id)
+            )
+          `,
+      patients: `
+        CREATE TABLE IF NOT EXISTS patients (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          user_id INT NOT NULL,
+          date_of_birth DATE NOT NULL,
+          gender ENUM('male','female','other') DEFAULT 'other',
+          dni VARCHAR(20) NOT NULL UNIQUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+          `,
+      health_summaries: `
+        CREATE TABLE IF NOT EXISTS health_summaries (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          patient_id INT NOT NULL,
+          summary_date DATE NOT NULL,
+          temperature DECIMAL(4,1),
+          height DECIMAL(5,2),
+          weight DECIMAL(5,2),
+          systolic_pressure INT,
+          diastolic_pressure INT,
+          blood_type ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (patient_id) REFERENCES patients(id)
+      )`,
+      doctor_patients: `
+        CREATE TABLE IF NOT EXISTS doctor_patients (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          doctor_id INT NOT NULL,
+          patient_id INT NOT NULL,
+          status ENUM('activo','inactivo') DEFAULT 'activo',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+          FOREIGN KEY (patient_id) REFERENCES patients(id),
+          UNIQUE (doctor_id, patient_id)
+        )
+      `,
+      availabilities: `
+        CREATE TABLE IF NOT EXISTS availabilities (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          doctor_id INT NOT NULL,
+          day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+          day DATE NOT NULL,
+          start_time TIME NOT NULL,
+          end_time TIME NOT NULL,
+          rest_start_time TIME NOT NULL,
+          rest_end_time TIME NOT NULL,
+          period_time INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+        )
+      `,
+      appointments: `
+        CREATE TABLE IF NOT EXISTS appointments (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          availability_id INT NOT NULL,
+          doctor_id INT NOT NULL,
+          patient_id INT,
+          day DATE NOT NULL,
+          start_time TIME NOT NULL,
+          end_time TIME NOT NULL,
+          status ENUM('confirmado','cancelado','completado') DEFAULT 'confirmado',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+          FOREIGN KEY (patient_id) REFERENCES patients(id),
+          FOREIGN KEY (availability_id) REFERENCES availabilities(id)
+        )
+      `,
+      medical_consultations_detail: `
+        CREATE TABLE IF NOT EXISTS medical_consultations_detail (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          doctor_id INT NOT NULL,
+          patient_id INT NOT NULL,
+          appointment_id INT NOT NULL,
+          reason_for_consultation VARCHAR(255) NOT NULL,
+          description TEXT,
+          diagnosis TEXT NOT NULL,
+          instructions TEXT,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+          FOREIGN KEY (patient_id) REFERENCES patients(id),
+          FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+        )
+      `,
+      attached_documentation: `
+        CREATE TABLE IF NOT EXISTS attached_documentation (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          doctor_id INT NOT NULL,
+          patient_id INT NOT NULL,
+          appointment_id INT NOT NULL,
+          url_attached_documentation VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )`,
     };
 
     // Crear las tablas
@@ -89,4 +215,3 @@ export const testConnection = async () => {
   }
 };
 
-export default getPool;

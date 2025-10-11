@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { makeUserService } from "../services/user";
-import { User } from "../models/user";
+import { User, UserResponse } from "../models/user";
 import { LoginCredentials, LoginSchema } from "../models/auth";
 import { makeAuthService } from "../services/auth";
 
@@ -40,7 +39,15 @@ export const currentUser = async (req: Request, res: Response) => {
   try {
     const user = res.locals.user as User;
 
-    return res.status(200).json({ user });
+    const userResponse: UserResponse = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      created_at: user.created_at
+    };
+
+    return res.status(200).json({ userResponse });
   } catch (error) {
     console.error("Error fetching user:", error);
     return res.status(500).json({ error: "Internal server error" });
