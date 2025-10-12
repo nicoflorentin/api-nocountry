@@ -1,9 +1,9 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { hashPassword } from '../utils/hash_password';
 
 dotenv.config();
 
-// Configuración inicial sin base de datos específica
 const initialConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -15,27 +15,65 @@ const initialConfig = {
 };
 
 const DB_NAME = process.env.DB_NAME || 'nocountry';
+const ADMIN_FIRST_NAME = process.env.ADMIN_FIRST_NAME;
+const ADMIN_LAST_NAME = process.env.ADMIN_LAST_NAME;
+const ADMIN_PHONE = process.env.ADMIN_PHONE;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_IS_ACTIVE = process.env.ADMIN_IS_ACTIVE === 'true'; // Convertir a booleano
+const ADMIN_ROLE = process.env.ADMIN_ROLE;
 
-// Función para crear la base de datos y las tablas
+async function createDefaultAdmin(pool: mysql.Pool) {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !ADMIN_ROLE) {
+    console.warn('⚠️ Advertencia: Variables de entorno de administrador incompletas. Se omitirá la creación del admin por defecto.');
+    return;
+  }
+
+  try {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [ADMIN_EMAIL]);
+
+    if (rows.length === 0) {
+      const hashedPassword = await hashPassword(ADMIN_PASSWORD);
+      
+      const insertQuery = `
+        INSERT INTO users 
+        (first_name, last_name, phone, email, password, is_active, role) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+      const values = [
+        ADMIN_FIRST_NAME,
+        ADMIN_LAST_NAME,
+        ADMIN_PHONE,
+        ADMIN_EMAIL,
+        hashedPassword,
+        ADMIN_IS_ACTIVE,
+        ADMIN_ROLE
+      ];
+      
+      await pool.query(insertQuery, values);
+      console.log('✅ Usuario administrador por defecto creado exitosamente.');
+    } else {
+      console.log('ℹ️ El usuario administrador por defecto ya existe. No se creó.');
+    }
+  } catch (error) {
+    console.error('❌ Error al crear el usuario administrador por defecto:', error);
+  }
+}
+
 async function initializeDatabase() {
   try {
-    // Crear una conexión inicial sin base de datos específica
     const initialPool = mysql.createPool(initialConfig);
 
-    // Crear la base de datos si no existe
     await initialPool.query(`CREATE DATABASE IF NOT EXISTS ${DB_NAME}`);
     console.log(`Database ${DB_NAME} checked/created successfully`);
 
-    // Cerrar la conexión inicial
     await initialPool.end();
 
-    // Crear el pool final con la base de datos seleccionada
     const pool = mysql.createPool({
       ...initialConfig,
       database: DB_NAME
     });
 
-    // Definir las tablas
     const tables = {
       users: `
         CREATE TABLE IF NOT EXISTS users (
@@ -118,8 +156,7 @@ async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS availabilities (
           id INT PRIMARY KEY AUTO_INCREMENT,
           doctor_id INT NOT NULL,
-          day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
-          day DATE NOT NULL,
+          day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday'),
           start_time TIME NOT NULL,
           end_time TIME NOT NULL,
           rest_start_time TIME NOT NULL,
@@ -177,11 +214,12 @@ async function initializeDatabase() {
         )`,
     };
 
-    // Crear las tablas
     for (const [tableName, query] of Object.entries(tables)) {
       await pool.query(query);
       console.log(`Table ${tableName} checked/created successfully`);
     }
+
+    await createDefaultAdmin(pool);
 
     return pool;
   } catch (error) {
@@ -190,18 +228,36 @@ async function initializeDatabase() {
   }
 }
 
-// Exportar la función de inicialización
-export const initDB = initializeDatabase;
 
-// Pool inicial temporal
 let pool: mysql.Pool;
+let initializingPromise: Promise<mysql.Pool> | null = null;
 
 export const getPool = async () => {
-  if (!pool) {
-    pool = await initializeDatabase();
+  if (pool) {
+    return pool;
   }
-  return pool;
+  
+  // Si hay una inicialización en curso, esperamos a que termine.
+  if (initializingPromise) {
+    return initializingPromise;
+  }
+
+  // No hay pool ni inicialización, creamos la promesa.
+  console.log('⚙️ Iniciando la configuración de la base de datos...');
+  initializingPromise = initializeDatabase(); 
+
+  try {
+    // Espera a que termine la inicialización y asigna el pool.
+    pool = await initializingPromise;
+    return pool;
+  } catch (error) {
+    // Si falla la inicialización, limpia el candado y re-lanza el error.
+    initializingPromise = null; 
+    throw error;
+  } 
 };
+
+export const initDB = getPool; // Usar getPool como función de inicialización principal
 
 export const testConnection = async () => {
   try {
@@ -214,4 +270,6 @@ export const testConnection = async () => {
     return false;
   }
 };
+
+
 
