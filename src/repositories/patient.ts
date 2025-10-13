@@ -1,7 +1,7 @@
 import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
-import { PatientCreate } from "../models/pacient";
+import { PatientCreate } from "../models/patient";
 
 export interface PacientRepository {
   getPat1ientByID(id: number): Promise<User | null>;
