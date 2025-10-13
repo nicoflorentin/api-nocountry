@@ -1,7 +1,8 @@
-export interface Pacient {
+export interface Patient {
   id: number;
   dateOfBirth: Date;
   dni: string;
+  gender: string;
 }
 
 export interface PatientCreate {

@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { User, UserResponse } from "../models/user";
-import { LoginCredentials, LoginSchema } from "../models/auth";
+import { LoginCredentials, LoginSchema } from "../validations/auth";
 import { makeAuthService } from "../services/auth";
+import { CurrentUser } from "../models/auth";
 
 let authService: Awaited<ReturnType<typeof makeAuthService>>;
 
@@ -37,17 +38,9 @@ export const login = async (req: Request, res: Response) => {
 
 export const currentUser = async (req: Request, res: Response) => {
   try {
-    const user = res.locals.user as User;
+    const user = res.locals.user as CurrentUser;
 
-    const userResponse: UserResponse = {
-      id: user.id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      created_at: user.created_at
-    };
-
-    return res.status(200).json({ userResponse });
+    return res.status(200).json({ user });
   } catch (error) {
     console.error("Error fetching user:", error);
     return res.status(500).json({ error: "Internal server error" });

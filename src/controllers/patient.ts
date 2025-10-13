@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { makePatientService } from "../services/pacient";
 import { PatientCreateSchema } from "../validations/patient";
-import { PatientCreate } from "../models/pacient";
+import { PatientCreate } from "../models/patient";
 import { UserResponse } from "../models/user";
 
 let patientService: Awaited<ReturnType<typeof makePatientService>>;

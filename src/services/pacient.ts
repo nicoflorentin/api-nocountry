@@ -1,4 +1,4 @@
-import { PatientCreate } from "../models/pacient";
+import { PatientCreate } from "../models/patient";
 import { User, UserCreate, UserResponse } from "../models/user";
 import { makePatientRepository } from "../repositories/patient";
 import { hashPassword } from "../utils/hash_password";
