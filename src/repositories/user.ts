@@ -39,6 +39,26 @@ export async function makeUserRepository() {
       }
     },
 
+    async getAllUsers(): Promise<User[]> {
+      try {
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>("SELECT * FROM users");
+
+        return (rows as any[]).map(row => ({
+          id: row.id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          email: row.email,
+          password: row.password,
+          role: row.role,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        }));
+      } catch (error) {
+        console.error('Error in getAllUsers:', error);
+        throw new Error('Failed to fetch users');
+      }
+    },
+
     // async createPatient(patientCreate: PatientCreate): Promise<User> {
     //   try {
     //     await conn.beginTransaction();

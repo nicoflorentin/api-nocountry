@@ -26,5 +26,15 @@ export async function makePatientService() {
 
       return userResponse;
      },
+      async getAllPatients(): Promise<UserResponse[]> {
+        const patients = await patientRepository.getAllPatients();
+        return patients.map(u => ({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          createdAt: u.createdAt
+        }));
+      }
   };
 }

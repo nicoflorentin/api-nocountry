@@ -62,6 +62,32 @@ export async function makePatientRepository() {
       }
     },
 
+    async getAllPatients(): Promise<User[]> {
+      try {
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+          `SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.role, u.created_at, u.updated_at,
+                  p.date_of_birth AS dateOfBirth, p.dni, p.gender
+           FROM users u
+           INNER JOIN patients p ON p.user_id = u.id`
+        );
+
+        return (rows as any[]).map(row => ({
+          id: row.id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          email: row.email,
+          password: row.password,
+          role: row.role,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          // patient specific fields are available on row but repository returns User shape; include if needed elsewhere
+        }));
+      } catch (error) {
+        console.error('Error in getAllPatients:', error);
+        throw new Error('Failed to fetch patients');
+      }
+    },
+
     // async updateUser(id: number, user: Partial<User>): Promise<User | null> {
     //   try {
     //     const fields = Object.keys(user).map(key => `${key} = ?`).join(', ');

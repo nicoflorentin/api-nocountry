@@ -12,7 +12,7 @@ let patientService: Awaited<ReturnType<typeof makePatientService>>;
 
 export const createPatient = async (req: Request, res: Response) => {
   const result = PatientCreateSchema.safeParse(req.body);
-
+  console.log('result',result)
   if (!result.success) {
     return res.status(400).json({
       errors: result.error.issues.map((e) => ({
@@ -31,4 +31,21 @@ export const createPatient = async (req: Request, res: Response) => {
       console.error("Error fetching user:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
+}
+
+export const getAllPatients = () => {
+  return async (req: Request, res: Response) => {
+    try {
+      if (!patientService) {
+        throw new Error('Patient service not initialized');
+      }
+
+      const patients = await patientService.getAllPatients();
+
+      return res.status(200).json({ patients });
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
