@@ -41,7 +41,7 @@
  *           example: "MD1231"
  *         bio:
  *           type: string
- *           example: "other"
+ *           example: "Soy super profesional"
  *         specialityId:
  *           type: number
  *           example: 1

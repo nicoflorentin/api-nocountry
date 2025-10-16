@@ -73,12 +73,13 @@ export async function makeDoctorRepository() {
 
 		async createDoctor(doctorCreate: DoctorCreate): Promise<User> {
 			const conn = await pool.getConnection()
+			const role: string = "medico"; 
 			try {
 				await conn.beginTransaction();
 
 				const [result] = await conn.execute<mysql.ResultSetHeader>(
-					"INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
-					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.password]
+					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
+					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.password, role]
 				);
 
 				const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
@@ -100,8 +101,8 @@ export async function makeDoctorRepository() {
 				}
 
 				const [_] = await conn.execute<mysql.ResultSetHeader>(
-					"INSERT INTO doctors (user_id, specialty_id, license_number) VALUES (?, ?, ?)",
-					[newUser[0].id, doctorCreate.specialityId, doctorCreate.licenseNumber]
+					"INSERT INTO doctors (user_id, specialty_id, license_number, bio) VALUES (?, ?, ?, ?)",
+					[newUser[0].id, doctorCreate.specialityId, doctorCreate.licenseNumber, doctorCreate.bio]
 				);
 
 				await conn.commit();

@@ -12,6 +12,7 @@ export interface DoctorCreate {
   password: string;
   specialityId: number;
   licenseNumber: string;
+  bio?: string;
 }
 
 export interface DoctorResponse {
