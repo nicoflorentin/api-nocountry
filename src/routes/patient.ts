@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { createPatient, getAllPatients } from "../controllers/patient"
+import { createPatient, getAllPatients, getPatientByID } from "../controllers/patient"
 
 /**
  * @swagger
@@ -8,6 +8,36 @@ import { createPatient, getAllPatients } from "../controllers/patient"
  *   description: Operaciones relacionadas con usuarios
  */
 export const patient = Router()
+
+/**
+ * @swagger
+ * /api/patient/{id}:
+ *   get:
+ *     summary: Obtener paciente por ID
+ *     tags: [Patient]
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: ID del paciente
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detalles del paciente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 patient:
+ *                   $ref: '#/components/schemas/PatientResponse'
+ *       404:
+ *         description: Paciente no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+patient.get("/:id", getPatientByID())
 
 /**
  * @swagger
@@ -45,9 +75,7 @@ patient.post("/create", createPatient)
  *                 patients:
  *                   type: array
  *                   items:
- *                     type: object
- *                     properties:
- *                       id:
+ *                     $ref: '#/components/schemas/PatientResponse'
  *                         type: integer
  *                         example: 1
  *                       firstName:

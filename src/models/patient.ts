@@ -5,6 +5,17 @@ export interface Patient {
   gender: string;
 }
 
+export interface PatientResponse {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  createdAt: Date;
+  dateOfBirth: Date;
+  gender: string;
+  dni: string;
+}
+
 export interface PatientCreate {
   firstName: string;
   lastName: string;
