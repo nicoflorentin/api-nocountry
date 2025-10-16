@@ -1,6 +1,6 @@
 import app from "./app"
 
-const port = 3001
+const port = process.env.PORT
 
 export async function main() {
 	try {

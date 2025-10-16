@@ -52,7 +52,7 @@ export async function makeAuthRepository() {
           case "admin":
             data = null;
             break;
-          case "doctor":
+          case "medico":
             const [rowsDoctor] = await connection.execute<mysql.RowDataPacket[]>(
               "SELECT d.id, d.license_number, d.bio, s.name FROM doctors as d INNER JOIN specialties as s ON d.specialty_id = s.id WHERE user_id = ?",
               [id]
@@ -64,7 +64,7 @@ export async function makeAuthRepository() {
 
             data = {
               id: rowsDoctor[0].id,
-              specialty: rowsDoctor[0].name, //revisar codigo
+              speciality: rowsDoctor[0].name, //revisar codigo
               licenseNumber: rowsDoctor[0].license_number,
               bio: rowsDoctor[0].bio
             }

@@ -1,31 +1,50 @@
 import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
-import { PatientCreate } from "../models/patient";
+import { PatientCreate, PatientResponse } from "../models/patient";
 
 export interface PacientRepository {
-  getPat1ientByID(id: number): Promise<User | null>;
-  getAllPatients(): Promise<User[]>;
-  createPatient(user: Omit<User, 'id'>): Promise<User>;
-  updatePatient(id: number, user: Partial<User>): Promise<User | null>;
+  getPatientByID(id: number): Promise<PatientResponse | null>;
+  getAllPatients(): Promise<PatientResponse[]>;
+  createPatient(patient: PatientCreate): Promise<PatientResponse>;
+  updatePatient(id: number, patient: Partial<PatientResponse>): Promise<PatientResponse | null>;
   deletePatient(id: number): Promise<boolean>;
 }
 
 export async function makePatientRepository() {
   const pool = await getPool();
   return {
-    // async getPatientByID(id: number): Promise<User | null> {
-    //   try {
-    //     const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-    //       "SELECT * FROM users WHERE id = ?",
-    //       [id]
-    //     );
-    //     return rows[0] as User || null;
-    //   } catch (error) {
-    //     console.error('Error in getUserByID:', error);
-    //     throw new Error('Failed to fetch user by ID');
-    //   }
-    // },
+    async getPatientByID(id: number): Promise<PatientResponse | null> {
+      try {
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
+                  p.date_of_birth AS dateOfBirth, p.dni, p.gender
+           FROM patients p
+           INNER JOIN users p ON p.user_id = u.id
+           WHERE p.id = ?`,
+          [id]
+        );
+
+        if (rows.length === 0) {
+          return null;
+        }
+
+        return {
+          id: rows[0].id,
+          user_id: rows[0].user_id,
+          firstName: rows[0].first_name,
+          lastName: rows[0].last_name,
+          email: rows[0].email,
+          createdAt: new Date(rows[0].created_at),
+          dateOfBirth: new Date(rows[0].dateOfBirth),
+          gender: rows[0].gender,
+          dni: rows[0].dni
+        };
+      } catch (error) {
+        console.error('Error in getPatientByID:', error);
+        throw new Error('Failed to fetch patient by ID');
+      }
+    },
 
     async createPatient(patientCreate: PatientCreate): Promise<User> {
       const conn = await pool.getConnection();
@@ -60,6 +79,33 @@ export async function makePatientRepository() {
         throw new Error('Error al crear usuario');
       } finally {
         conn.release();
+      }
+    },
+
+    async getAllPatients(): Promise<PatientResponse[]> {
+      try {
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
+                  p.date_of_birth AS dateOfBirth, p.dni, p.gender
+           FROM patients p
+           INNER JOIN users p ON p.user_id = u.id`
+        );
+
+        return (rows as any[]).map(row => ({
+          id: row.id,
+          user_id: row.user_id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          email: row.email,
+          createdAt: new Date(row.created_at),
+          dateOfBirth: new Date(row.dateOfBirth),
+          gender: row.gender,
+          dni: row.dni
+          // patient specific fields are available on row but repository returns User shape; include if needed elsewhere
+        }));
+      } catch (error) {
+        console.error('Error in getAllPatients:', error);
+        throw new Error('Failed to fetch patients');
       }
     },
 

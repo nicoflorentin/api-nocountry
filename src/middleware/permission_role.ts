@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { User } from "../models/user";
-import { CurrentUser } from "../models/auth";
 
 // Middleware factory para roles
 export function permissionRoleMiddleware(roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = res.locals.user as CurrentUser;
+      const user = res.locals.user as User;
 
       if (!user) {
         return res.status(401).json({ error: "Unauthorized" });
