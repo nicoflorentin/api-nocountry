@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getAllUsers, getUserByID } from "../controllers/user";
 
 export const user = Router();
 
@@ -29,6 +30,7 @@ export const user = Router();
  *         description: Usuario no encontrado
  */
 // user.get("/:id", getUserByID);
+user.get("/:id", getUserByID);
 
 /**
  * @swagger
@@ -49,3 +51,6 @@ export const user = Router();
  *         description: Usuario no encontrado
  */
 // user.post("/create", createUser);
+
+// Lista todos los usuarios
+user.get("/", getAllUsers);
