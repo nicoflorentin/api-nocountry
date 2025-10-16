@@ -13,7 +13,6 @@ export interface PacientRepository {
 
 export async function makePatientRepository() {
   const pool = await getPool();
-  const conn = await pool.getConnection(); 
   return {
     // async getPatientByID(id: number): Promise<User | null> {
     //   try {
@@ -29,6 +28,8 @@ export async function makePatientRepository() {
     // },
 
     async createPatient(patientCreate: PatientCreate): Promise<User> {
+      const conn = await pool.getConnection();
+      
       try {
         await conn.beginTransaction();
 
@@ -36,7 +37,7 @@ export async function makePatientRepository() {
           "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
           [patientCreate.firstName, patientCreate.lastName, patientCreate.email, patientCreate.password]
         );
-        
+
         const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
           "SELECT * FROM users WHERE id = ?",
           [result.insertId]
@@ -50,7 +51,7 @@ export async function makePatientRepository() {
           "INSERT INTO patients (user_id, date_of_birth, gender, dni) VALUES (?, ?, ?, ?)",
           [newUser[0].id, patientCreate.dateOfBirth, patientCreate.gender, patientCreate.dni]
         );
-        
+
         await conn.commit();
         return newUser[0] as User;
       } catch (error) {
