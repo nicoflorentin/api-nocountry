@@ -90,6 +90,9 @@ app.use(logger);
 app.use(morgan("dev"));
 app.use(router)
 // Test endpoint
+router.use('/api/hello', (req, res)=> {
+  res.send('hello world')
+})
 
 
 export default app;

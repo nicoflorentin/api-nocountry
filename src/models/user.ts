@@ -1,10 +1,10 @@
-import z from "zod";
-
 export interface User {
   id: number;
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  phone_code?: string;
   password: string;
   role: string;
   createdAt?: Date;
