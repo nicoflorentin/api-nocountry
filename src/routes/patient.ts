@@ -5,7 +5,7 @@ import { createPatient, getAllPatients, getPatientByID } from "../controllers/pa
  * @swagger
  * tags:
  *   name: Patient
- *   description: Operaciones relacionadas con usuarios
+ *   description: Operaciones relacionadas con pacientes
  */
 export const patient = Router()
 
@@ -46,16 +46,23 @@ patient.get("/:id", getPatientByID())
  *     summary: Crear usuario paciente
  *     tags: [Patient]
  *     requestBody:
- *        required: true
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/PatientCreate'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PatientCreate'
  *     responses:
- *       200:
- *         description: Paciente creado
+ *       201:
+ *         description: Paciente creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PatientResponse'
+ *       400:
+ *         description: Datos inválidos
+ *       500:
+ *         description: Error interno del servidor
  */
-
 patient.post("/create", createPatient)
 
 /**
@@ -76,21 +83,7 @@ patient.post("/create", createPatient)
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/PatientResponse'
- *                         type: integer
- *                         example: 1
- *                       firstName:
- *                         type: string
- *                         example: John
- *                       lastName:
- *                         type: string
- *                         example: Doe
- *                       email:
- *                         type: string
- *                         format: email
- *                         example: user@example.com
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *                         example: 2025-01-01T12:00:00Z
+ *       500:
+ *         description: Error interno del servidor
  */
 patient.get("/", getAllPatients())
