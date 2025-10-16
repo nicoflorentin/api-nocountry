@@ -37,7 +37,7 @@ export const patient = Router()
  *       500:
  *         description: Error interno del servidor
  */
-patient.get("/:id", getPatientByID())
+patient.get("/:id", getPatientByID)
 
 /**
  * @swagger
@@ -86,4 +86,4 @@ patient.post("/create", createPatient)
  *       500:
  *         description: Error interno del servidor
  */
-patient.get("/", getAllPatients())
+patient.get("/", getAllPatients)

@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { makePatientService } from "../services/pacient"
+import { makePatientService } from "../services/patient"
 import { PatientCreateSchema } from "../validations/patient"
 import { PatientCreate } from "../models/patient"
 import { UserResponse } from "../models/user"

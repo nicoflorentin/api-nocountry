@@ -7,6 +7,7 @@ export interface Patient {
 
 export interface PatientResponse {
   id: number;
+  user_id: number;
   firstName: string;
   lastName: string;
   email: string;

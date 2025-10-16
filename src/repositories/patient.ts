@@ -18,11 +18,11 @@ export async function makePatientRepository() {
     async getPatientByID(id: number): Promise<PatientResponse | null> {
       try {
         const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-          `SELECT u.id, u.first_name, u.last_name, u.email, u.created_at,
+          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
                   p.date_of_birth AS dateOfBirth, p.dni, p.gender
-           FROM users u
-           INNER JOIN patients p ON p.user_id = u.id
-           WHERE u.id = ?`,
+           FROM patients p
+           INNER JOIN users p ON p.user_id = u.id
+           WHERE p.id = ?`,
           [id]
         );
 
@@ -32,6 +32,7 @@ export async function makePatientRepository() {
 
         return {
           id: rows[0].id,
+          user_id: rows[0].user_id,
           firstName: rows[0].first_name,
           lastName: rows[0].last_name,
           email: rows[0].email,
@@ -83,14 +84,15 @@ export async function makePatientRepository() {
     async getAllPatients(): Promise<PatientResponse[]> {
       try {
         const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-          `SELECT u.id, u.first_name, u.last_name, u.email, u.created_at,
+          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
                   p.date_of_birth AS dateOfBirth, p.dni, p.gender
-           FROM users u
-           INNER JOIN patients p ON p.user_id = u.id`
+           FROM patients p
+           INNER JOIN users p ON p.user_id = u.id`
         );
 
         return (rows as any[]).map(row => ({
           id: row.id,
+          user_id: row.user_id,
           firstName: row.first_name,
           lastName: row.last_name,
           email: row.email,

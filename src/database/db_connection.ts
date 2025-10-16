@@ -62,6 +62,31 @@ async function createDefaultAdmin(pool: mysql.Pool) {
 	}
 }
 
+async function createSpecialities(pool: mysql.Pool) {
+  try {
+
+    const specialities = [
+      { name: "cardiología", description: "Especialidad de cardiología" },
+      { name: "pediatría", description: "Especialidad de pediatría" },
+      { name: "neurología", description: "Especialidad de neurología" },
+      { name: "oncología", description: "Especialidad de oncología" },
+      { name: "ginecología", description: "Especialidad de ginecología" },
+    ];
+    
+    for (const speciality of specialities) {
+      const { name, description } = speciality;
+      const insertQuery = `
+      INSERT IGNORE INTO specialties (name, description)
+      VALUES (?, ?)
+      `;
+      const values = [name, description];
+      await pool.query(insertQuery, values);
+    }
+  } catch (error) {
+    console.error("❌ Error al crear las especialidades:", error);
+  }
+}
+
 async function initializeDatabase() {
 	try {
 		const initialPool = mysql.createPool(initialConfig)
@@ -225,6 +250,8 @@ async function initializeDatabase() {
 		}
 
 		await createDefaultAdmin(pool)
+
+    await createSpecialities(pool)
 
 		return pool
 	} catch (error) {
