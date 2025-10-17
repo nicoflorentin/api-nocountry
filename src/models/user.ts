@@ -6,6 +6,7 @@ export interface User {
   phone?: string;
   phone_code?: string;
   password: string;
+  url_image?: string;
   role: string;
   createdAt?: Date;
   updatedAt?: Date;
