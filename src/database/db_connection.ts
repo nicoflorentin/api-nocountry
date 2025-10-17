@@ -212,6 +212,7 @@ async function initializeDatabase() {
           start_time TIME NOT NULL,
           end_time TIME NOT NULL,
           status ENUM('confirmado','cancelado','completado') DEFAULT 'confirmado',
+          consultation_type ENUM('virtual','presencial') NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (doctor_id) REFERENCES doctors(id),
