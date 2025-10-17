@@ -1,6 +1,7 @@
 import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
+import { updateUserImage } from "../controllers/user";
 
 export interface UserRepository {
   getUserByID(id: number): Promise<User | null>;
@@ -12,7 +13,7 @@ export interface UserRepository {
 
 export async function makeUserRepository() {
   const pool = await getPool();
-  const conn = await pool.getConnection(); 
+  const conn = await pool.getConnection();
   return {
     async getUserByID(id: number): Promise<User | null> {
       try {
@@ -59,77 +60,22 @@ export async function makeUserRepository() {
       }
     },
 
-    // async createPatient(patientCreate: PatientCreate): Promise<User> {
-    //   try {
-    //     await conn.beginTransaction();
+    async updateUserImage(url: string, userId: number): Promise<boolean | null> {
+      try {
+        const [result] = await conn.execute<mysql.ResultSetHeader>(
+          "UPDATE users SET url_image = ? WHERE id = ?",
+          [url, userId]
+        );
 
-    //     const [result] = await conn.execute<mysql.ResultSetHeader>(
-    //       "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
-    //       [patientCreate.first_name, patientCreate.last_name, patientCreate.email, patientCreate.password]
-    //     );
-        
-    //     const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
-    //       "SELECT * FROM users WHERE id = ?",
-    //       [result.insertId]
-    //     );
+        if (result.affectedRows === 0) {
+          return false;
+        }
 
-    //     if (newUser.length === 0) {
-    //       throw new Error('Failed to create user');
-    //     }
-
-    //     const [_] = await conn.execute<mysql.ResultSetHeader>(
-    //       "INSERT INTO patients (user_id, date_of_birth, gender, dni) VALUES (?, ?, ?, ?)",
-    //       [newUser[0].id, patientCreate.date_of_birth, patientCreate.gender, patientCreate.dni]
-    //     );
-        
-    //     await conn.commit();
-    //     return newUser[0] as User;
-    //   } catch (error) {
-    //     await conn.rollback();
-    //     console.error('Error in createPatient:', error);
-    //     throw new Error('Error al crear usuario');
-    //   } finally {
-    //     conn.release();
-    //   }
-    // },
-
-    // async updateUser(id: number, user: Partial<User>): Promise<User | null> {
-    //   try {
-    //     const fields = Object.keys(user).map(key => `${key} = ?`).join(', ');
-    //     const values = [...Object.values(user), id];
-
-    //     const [result] = await connection.execute<mysql.ResultSetHeader>(
-    //       `UPDATE users SET ${fields} WHERE id = ?`,
-    //       values
-    //     );
-
-    //     if (result.affectedRows === 0) {
-    //       return null;
-    //     }
-
-    //     const [updatedUser] = await connection.execute<mysql.RowDataPacket[]>(
-    //       "SELECT * FROM users WHERE id = ?",
-    //       [id]
-    //     );
-
-    //     return updatedUser[0] as User;
-    //   } catch (error) {
-    //     console.error('Error in updateUser:', error);
-    //     throw new Error('Failed to update user');
-    //   }
-    // },
-
-    // async deleteUser(id: number): Promise<boolean> {
-    //   try {
-    //     const [result] = await connection.execute<mysql.ResultSetHeader>(
-    //       "DELETE FROM users WHERE id = ?",
-    //       [id]
-    //     );
-    //     return result.affectedRows > 0;
-    //   } catch (error) {
-    //     console.error('Error in deleteUser:', error);
-    //     throw new Error('Failed to delete user');
-    //   }
-    // }
-  };
+        return true;
+      } catch (error) {
+        console.error('Error in updateUserImage:', error);
+        throw new Error('Failed to update user image');
+      }
+    }
+  }
 }

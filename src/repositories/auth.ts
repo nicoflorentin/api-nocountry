@@ -43,6 +43,7 @@ export async function makeAuthRepository() {
           lastName: rows[0].last_name,
           email: rows[0].email,
           role: rows[0].role,
+          url_image: rows[0].url_image,
           password: rows[0].password
         };
 
@@ -96,6 +97,7 @@ export async function makeAuthRepository() {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
+          url_image: user.url_image,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
           data: data
