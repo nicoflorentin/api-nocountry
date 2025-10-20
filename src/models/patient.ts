@@ -1,7 +1,9 @@
 export interface Patient {
   id: number;
   dateOfBirth: Date;
-  dni: string;
+  typeIdentification: string;
+  identification: string;
+  nationality: string;
   gender: string;
 }
 
@@ -14,7 +16,9 @@ export interface PatientResponse {
   createdAt: Date;
   dateOfBirth: Date;
   gender: string;
-  dni: string;
+  typeIdentification: string;
+  identification: string;
+  nationality: string;
 }
 
 export interface PatientCreate {
@@ -25,6 +29,8 @@ export interface PatientCreate {
   password: string;
   repeatPassword: string;
   dateOfBirth: Date;
-  gender: string;
-  dni: string;
+  gender: 'male' | 'female' | 'other';
+  identification: string;
+  typeIdentification: 'dni' | 'cc' | 'ci';
+  nationality: string;
 }

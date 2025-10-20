@@ -9,9 +9,18 @@ export interface DoctorCreate {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   password: string;
   specialityId: number;
   licenseNumber: string;
+  bio?: string;
+}
+
+export interface DoctorUpdate {
+  id: number;
+  firstName: string;
+  lastName: string;
+  specialityId: number;
   bio?: string;
 }
 

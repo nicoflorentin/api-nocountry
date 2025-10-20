@@ -16,6 +16,8 @@ export const doctor = Router()
  *   get:
  *     summary: Obtener lista de doctor
  *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de doctor
@@ -37,6 +39,8 @@ doctor.get("/", getAllDoctors)
  *   get:
  *     summary: Obtener médico por ID
  *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -86,3 +90,10 @@ doctor.get("/:id", getDoctorByID)
  *         description: Error interno del servidor
  */
 doctor.post("/create", createDoctor)
+
+doctor.get("/patient/:id", getPatientByID)
+doctor.get("/specialty/:id", getDoctorsBySpecialtyID)
+doctor.get("/search", getDoctorsByName)
+doctor.put("/:id", updateDoctor)
+
+

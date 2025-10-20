@@ -1,4 +1,6 @@
-import { DoctorCreate, DoctorResponse } from "../models/doctor"
+import { CurrentUser } from "../models/auth"
+import { DoctorCreate, DoctorResponse, DoctorUpdate } from "../models/doctor"
+import { PatientResponse } from "../models/patient"
 import { User, UserResponse } from "../models/user"
 import { makeDoctorRepository } from "../repositories/doctor"
 import { hashPassword } from "../utils/hash_password"
@@ -15,8 +17,8 @@ export async function makeDoctorService() {
 			return medic
 		},
 
-		async getAllDoctors(): Promise<DoctorResponse[]> {
-			return await medicRepository.getAllDoctors()
+		async getAllDoctors(limit: number, page: number): Promise<DoctorResponse[]> {
+			return await medicRepository.getAllDoctors(limit, page)
 		},
 
 		async createDoctor(doctorCreate: DoctorCreate): Promise<UserResponse> {
@@ -36,5 +38,22 @@ export async function makeDoctorService() {
 				createdAt: user.createdAt,
 			}
 		},
+
+		async getPatientByID(id: string, userDoctor: CurrentUser): Promise<PatientResponse | null> {
+			return await medicRepository.getPatientByID(Number(id), userDoctor)
+		},
+
+		async getDoctorsBySpecialtyID(id: string, limit: number, page: number): Promise<DoctorResponse[]> {
+			return await medicRepository.getDoctorsBySpecialtyID(Number(id), limit, page)
+		},
+
+		async getDoctorsByName(name: string): Promise<DoctorResponse[]> {
+			return await medicRepository.getDoctorsByName(name)
+		},
+
+		async updateDoctor(doctorUpdate: DoctorUpdate): Promise<boolean> {
+			return await medicRepository.updateDoctor(doctorUpdate)
+		},
+		
 	}
 }
