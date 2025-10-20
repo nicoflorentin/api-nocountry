@@ -1,5 +1,13 @@
 import { Router } from "express"
-import { getAllDoctors, getDoctorByID, createDoctor } from "../controllers/doctor"
+import {
+	getAllDoctors,
+	getDoctorByID,
+	createDoctor,
+	getDoctorsBySpecialtyID,
+	getDoctorsByName,
+	updateDoctor,
+	getPatientByID,
+} from "../controllers/doctor"
 import { get } from "http"
 
 /**
@@ -95,5 +103,3 @@ doctor.get("/patient/:id", getPatientByID)
 doctor.get("/specialty/:id", getDoctorsBySpecialtyID)
 doctor.get("/search", getDoctorsByName)
 doctor.put("/:id", updateDoctor)
-
-
