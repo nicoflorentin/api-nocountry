@@ -15,12 +15,13 @@ export async function makePatientRepository() {
   const pool = await getPool();
   return {
     async getPatientByID(id: number): Promise<PatientResponse | null> {
+      const conn = await pool.getConnection();
       try {
         const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                  p.date_of_birth AS dateOfBirth, p.dni, p.gender
+          `SELECT p.id, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
+                  p.date_of_birth AS dateOfBirth, p.identification, p.type_identification, p.nationality
            FROM patients p
-           INNER JOIN users p ON p.user_id = u.id
+           INNER JOIN users u ON p.user_id = u.id
            WHERE p.id = ?`,
           [id]
         );
@@ -38,7 +39,9 @@ export async function makePatientRepository() {
           createdAt: new Date(rows[0].created_at),
           dateOfBirth: new Date(rows[0].dateOfBirth),
           gender: rows[0].gender,
-          dni: rows[0].dni
+          identification: rows[0].identification,
+          typeIdentification: rows[0].type_identification,
+          nationality: rows[0].nationality
         };
       } catch (error) {
         console.error('Error in getPatientByID:', error);
@@ -48,7 +51,7 @@ export async function makePatientRepository() {
 
     async createPatient(patientCreate: PatientCreate): Promise<User> {
       const conn = await pool.getConnection();
-      
+
       try {
         await conn.beginTransaction();
 
@@ -67,28 +70,29 @@ export async function makePatientRepository() {
         }
 
         const [_] = await conn.execute<mysql.ResultSetHeader>(
-          "INSERT INTO patients (user_id, date_of_birth, gender, dni) VALUES (?, ?, ?, ?)",
-          [newUser[0].id, patientCreate.dateOfBirth, patientCreate.gender, patientCreate.dni]
+          "INSERT INTO patients (user_id, date_of_birth, gender, identification, type_identification, nationality) VALUES (?, ?, ?, ?, ?, ?)",
+          [newUser[0].id, patientCreate.dateOfBirth, patientCreate.gender, patientCreate.identification, patientCreate.typeIdentification, patientCreate.nationality]
         );
 
         await conn.commit();
         return newUser[0] as User;
       } catch (error) {
         await conn.rollback();
-        console.error('Error in createPatient:', error);
-        throw new Error('Error al crear usuario');
+        console.error("Error al crear paciente en repositorio:", error) // 👈 Muestra el error original
+        throw error;
       } finally {
         conn.release();
       }
     },
 
     async getAllPatients(): Promise<PatientResponse[]> {
+      const conn = await pool.getConnection();
       try {
         const [rows] = await conn.execute<mysql.RowDataPacket[]>(
-          `SELECT p.id, p.date_of_birth, p.dni, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                  p.date_of_birth AS dateOfBirth, p.dni, p.gender
+          `SELECT p.id, p.gender, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
+                  p.date_of_birth AS dateOfBirth, p.identification, p.type_identification, p.nationality
            FROM patients p
-           INNER JOIN users p ON p.user_id = u.id`
+           INNER JOIN users u ON p.user_id = u.id`
         );
 
         return (rows as any[]).map(row => ({
@@ -100,8 +104,9 @@ export async function makePatientRepository() {
           createdAt: new Date(row.created_at),
           dateOfBirth: new Date(row.dateOfBirth),
           gender: row.gender,
-          dni: row.dni
-          // patient specific fields are available on row but repository returns User shape; include if needed elsewhere
+          identification: row.identification,
+          typeIdentification: row.type_identification,
+          nationality: row.nationality
         }));
       } catch (error) {
         console.error('Error in getAllPatients:', error);

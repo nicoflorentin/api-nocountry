@@ -15,6 +15,8 @@ export const patient = Router()
  *   get:
  *     summary: Obtener paciente por ID
  *     tags: [Patient]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -43,7 +45,7 @@ patient.get("/:id", getPatientByID)
  * @swagger
  * /api/patient/create:
  *   post:
- *     summary: Crear usuario paciente
+ *     summary: Crea un nuevo paciente
  *     tags: [Patient]
  *     requestBody:
  *       required: true
@@ -52,16 +54,23 @@ patient.get("/:id", getPatientByID)
  *           schema:
  *             $ref: '#/components/schemas/PatientCreate'
  *     responses:
- *       201:
+ *       200:
  *         description: Paciente creado exitosamente
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/PatientResponse'
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 1
+ *                 email:
+ *                   type: string
+ *                   example: "user@example.com"
  *       400:
- *         description: Datos inválidos
- *       500:
- *         description: Error interno del servidor
+ *         description: Error de validación
+ *       409:
+ *         description: Ya existe un paciente con ese documento
  */
 patient.post("/create", createPatient)
 
@@ -71,6 +80,8 @@ patient.post("/create", createPatient)
  *   get:
  *     summary: Obtener lista de pacientes
  *     tags: [Patient]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de pacientes

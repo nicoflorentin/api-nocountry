@@ -83,7 +83,9 @@ export async function makeAuthRepository() {
             data = {
               id: rowsPatient[0].id,
               dateOfBirth: rowsPatient[0].date_of_birth,
-              dni: rowsPatient[0].dni,
+              identification: rowsPatient[0].identification,
+              typeIdentification: rowsPatient[0].type_identification,
+              nationality: rowsPatient[0].nationality,
               gender: rowsPatient[0].gender
             }
             break;

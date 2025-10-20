@@ -139,7 +139,7 @@ async function initializeDatabase() {
               id INT PRIMARY KEY AUTO_INCREMENT,
               user_id INT NOT NULL,
               specialty_id INT NOT NULL,
-              license_number VARCHAR(50) NOT NULL,
+              license_number VARCHAR(50) NOT NULL UNIQUE,
               bio TEXT,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -152,11 +152,14 @@ async function initializeDatabase() {
           id INT PRIMARY KEY AUTO_INCREMENT,
           user_id INT NOT NULL,
           date_of_birth DATE NOT NULL,
-          gender ENUM('male','female','other') DEFAULT 'other',
-          dni VARCHAR(20) NOT NULL UNIQUE,
+          gender ENUM('male','female','other') NOT NULL,
+          nationality VARCHAR(50) NOT NULL,
+          type_identification ENUM('dni','ci','cc') NOT NULL,
+          identification VARCHAR(20) NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users(id)
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          UNIQUE (type_identification, identification)
           )
           `,
 			health_summaries: `

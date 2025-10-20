@@ -26,8 +26,19 @@ export const createPatient = async (req: Request, res: Response) => {
 	try {
 		const user: UserResponse | null = await patientService.createPatient(createUser)
 		return res.status(200).json({ user })
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error fetching user:", error)
+		if (error.code === "ER_DUP_ENTRY") {
+			if (error.message.includes("email")){
+				return res.status(409).json({
+					error: "El email ya está registrado. Usa otro.",
+				})
+			} else if (error.message.includes("type_identification")) {
+				return res.status(409).json({
+					error: "La identificación ya está registrada.",
+				})
+			}
+		}
 		return res.status(500).json({ error: "Internal server error" })
 	}
 }
