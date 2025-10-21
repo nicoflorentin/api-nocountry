@@ -1,35 +1,51 @@
-import pool from "../database/db_connection";
-import { User, UserCreate, UserResponse } from "../models/user";
 import { makeUserRepository } from "../repositories/user";
-import { hashPassword } from "../utils/hash_password";
+import { UserResponse } from "../models/user";
+import { deleteImage, uploadImage } from "../utils/image";
+import { CurrentUser } from "../models/auth";
 
 export async function makeUserService() {
   const userRepository = await makeUserRepository();
 
   return {
-    async getUserByID(id: number): Promise<User | null> {
-      const result = await userRepository.getUserByID(id)
+    async updateUserImage(file: Express.Multer.File, user: CurrentUser): Promise<boolean> {
+      const oldUrlImage = user.url_image;
+
+      const imageUrl = await uploadImage(file.path);
+
+      const result = await userRepository.updateUserImage(imageUrl, user.id);
+
+      if (!result) {
+        return false;
+      }
+
+      if (oldUrlImage) {
+        await deleteImage(oldUrlImage);
+      }
+
       return result;
     },
 
-    async createUser(createUser: UserCreate): Promise<UserResponse | null> {
-      createUser.password = await hashPassword(createUser.password);
-
-      const user: User | null = await userRepository.createUser(createUser);
-      
-      if (user == null) {
-        return null;
-      }
-      
-      const userResponse: UserResponse = {
+    async getAllUsers(): Promise<UserResponse[]> {
+      const users = await userRepository.getAllUsers();
+      return users.map(u => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        createdAt: u.createdAt
+      }));
+    }
+    ,
+    async getUserByID(id: number): Promise<UserResponse | null> {
+      const user = await userRepository.getUserByID(id);
+      if (!user) return null;
+      return {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         createdAt: user.createdAt
       };
-
-      return userResponse;
-     },
+    }
   };
 }

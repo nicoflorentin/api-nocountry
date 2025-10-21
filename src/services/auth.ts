@@ -1,4 +1,4 @@
-import { LoginCredentials } from "../models/auth";
+import { LoginCredentials } from "../validations/auth";
 import { makeAuthRepository } from "../repositories/auth";
 import { verifyPassword } from "../utils/hash_password";
 import { generateToken, TokenClaims } from "../utils/token";

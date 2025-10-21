@@ -1,46 +1,36 @@
-version: '3.8'
-
 services:
   db:
-    image: mysql:8.0
+    image: mariadb:11
     container_name: nocountry_db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-nocountry}
-      MYSQL_USER: ${MYSQL_USER:-app}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - db_data:/var/lib/mysql
     ports:
       - "3305:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mariadb -uroot -p${MYSQL_ROOT_PASSWORD} -e 'SELECT 1;' || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: danielmchachagua/apinocountry:0.0.6
     container_name: nocountry_app
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DB_HOST: db
-      DB_USER: ${MYSQL_USER:-app}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
-      DB_NAME: ${MYSQL_DATABASE:-nocountry}
-      PORT: ${PORT:-3001}
+    env_file:
+      - .env
     ports:
       - "3001:3001"
-    # Para desarrollo en caliente descomenta la siguiente línea
-    # volumes:
-    #   - ./:/usr/src/app
 
 volumes:
   db_data:
-    driver: local
+

@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { createUser, getUserByID } from "../controllers/user";
+import { getAllUsers, getUserByID, updateUserImage } from "../controllers/user";
+import { authMiddleware } from "../middleware/auth";
+import multer from "multer";
 
 export const user = Router();
 
@@ -10,43 +12,51 @@ export const user = Router();
  *   description: Operaciones relacionadas con usuarios
  */
 
-/**
- * @swagger
- * /api/user/{id}:
- *   get:
- *     summary: Obtiene un usuario por su ID
- *     tags: [User]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID del usuario
- *     responses:
- *       200:
- *         description: Usuario encontrado
- *       404:
- *         description: Usuario no encontrado
- */
-user.get("/:id", getUserByID);
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 
 /**
  * @swagger
- * /api/user/create:
+ * /api/user/update_image:
  *   post:
- *     summary: Crear usuario paciente
+ *     summary: Actualizar imagen de usuario
  *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
- *        required: true
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/UserCreate'
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Imagen a subir
+ *             required:
+ *               - file
  *     responses:
  *       200:
- *         description: Usuario encontrado
+ *         description: Imagen actualizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 imageUrl:
+ *                   type: string
  *       404:
  *         description: Usuario no encontrado
+ *       401:
+ *         description: No autorizado
  */
-user.post("/create", createUser);
+user.post("/update_image", authMiddleware, upload.single("file"), updateUserImage);

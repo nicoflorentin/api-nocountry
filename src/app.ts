@@ -35,24 +35,46 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: "http://localhost:3001",
+        url: process.env.SERVER_URL || `https://www.nocountry.saltaget.com`,
+      },
+      {
+        url: `http://localhost:${process.env.PORT || 3001}`,
       },
     ],
   },
   apis: [
+    // include both TS (dev) and JS (built) files so swagger works in both envs
     path.join(__dirname, "./routes/**/*.ts"),
-    path.join(__dirname, "./docs/schemas/*.ts")
+    path.join(__dirname, "./routes/**/*.js"),
+    path.join(__dirname, "./docs/schemas/*.ts"),
+    path.join(__dirname, "./docs/schemas/*.js"),
+    // when compiled with rootDir="./" TS may emit files under dist/src/... so include those paths too
+    path.join(__dirname, "./src/routes/**/*.js"),
+    path.join(__dirname, "./src/docs/schemas/*.js")
   ],
 };
 
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
 
 app.use(express.json());
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use("/api/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // CORS primero
-const corsOptions = {
-  origin: [""],
+const allowedOrigins = (process.env.CORS_ORIGIN || "").split(",");
+// const corsOptions = {
+//   origin: allowedOrigins,
+//   credentials: true,
+//   allowedHeaders: ["Content-Type", "Authorization"],
+// };
+const corsOptions: cors.CorsOptions = {
+  origin: (origin: string | undefined, callback) => {
+    if (!origin) return callback(null, true); // permitir requests sin origin (Postman, etc)
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS policy: Origin not allowed"));
+    }
+  },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -68,6 +90,9 @@ app.use(logger);
 app.use(morgan("dev"));
 app.use(router)
 // Test endpoint
+router.use('/api/hello', (req, res)=> {
+  res.send('hello world')
+})
 
 
 export default app;
