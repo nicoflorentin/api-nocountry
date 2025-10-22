@@ -40,10 +40,12 @@ export const DoctorUpdateSchema = z.object({
   message: "Las contraseñas no coinciden",
 });
 
-export interface DoctorUpdate {
-  id: number;
-  firstName: string;
-  lastName: string;
-  specialityId: number;
-  bio?: string;
-}
+export const DoctorCreateByAdminSchema = z.object({
+  firstName: z.string().min(1, { message: "El nombre no puede estar vacio" }),
+  lastName: z.string().min(1, { message: "El apellido no puede estar vacio" }),
+  phone: z.string(),
+  email: z.email({ message: "Email inválido" }),
+  licenseNumber: z.string().min(1, { message: "La licencia no puede estar vacia" }),
+  bio: z.string(),
+  specialityId: z.number().min(1, { message: "La especialidad no puede estar vacia" }),
+});

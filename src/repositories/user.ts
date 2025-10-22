@@ -29,6 +29,9 @@ export async function makeUserRepository() {
           email: rows[0].email,
           password: rows[0].password,
           role: rows[0].role,
+          isActive: rows[0].is_active,
+          urlImage: rows[0].url_image,
+          phone: rows[0].phone,
           createdAt: rows[0].created_at,
           updatedAt: rows[0].updated_at
         }
@@ -51,6 +54,9 @@ export async function makeUserRepository() {
           email: row.email,
           password: row.password,
           role: row.role,
+          isActive: row.is_active,
+          urlImage: row.url_image,
+          phone: row.phone,
           createdAt: row.created_at,
           updatedAt: row.updated_at
         }));

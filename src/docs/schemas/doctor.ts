@@ -46,3 +46,38 @@
  *           type: number
  *           example: 1
  */
+
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DoctorUpdate:
+ *       type: object
+ *       required:
+ *         - id
+ *         - firstName
+ *         - lastName
+ *         - specialityId
+ *       properties:
+ *         id:
+ *           type: number
+ *           description: "ID del doctor a actualizar"
+ *           example: 1
+ *         firstName:
+ *           type: string
+ *           description: "Nuevo nombre del doctor"
+ *           example: "Jane"
+ *         lastName:
+ *           type: string
+ *           description: "Nuevo apellido del doctor"
+ *           example: "Smith"
+ *         specialityId:
+ *           type: number
+ *           description: "ID de la nueva especialidad del doctor"
+ *           example: 2
+ *         bio:
+ *           type: string
+ *           description: "Biografía actualizada del doctor (opcional)"
+ *           example: "Especialista con 10 años de experiencia en neurología."
+ */

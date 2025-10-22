@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from "express";
 import { getClaimsFromToken, TokenClaims } from "../utils/token";
-import { makeUserRepository } from "../repositories/user";
 import { makeAuthRepository } from "../repositories/auth";
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -23,6 +22,6 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     next();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

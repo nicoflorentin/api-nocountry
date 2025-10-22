@@ -1,8 +1,9 @@
 import { CurrentUser } from "../models/auth"
-import { DoctorCreate, DoctorResponse, DoctorUpdate } from "../models/doctor"
+import { DoctorCreate, DoctorCreateByAdmin, DoctorResponse, DoctorUpdate } from "../models/doctor"
 import { PatientResponse } from "../models/patient"
 import { User, UserResponse } from "../models/user"
 import { makeDoctorRepository } from "../repositories/doctor"
+import { genericPassword } from "../utils/generic_pass"
 import { hashPassword } from "../utils/hash_password"
 
 export async function makeDoctorService() {
@@ -17,7 +18,7 @@ export async function makeDoctorService() {
 			return medic
 		},
 
-		async getAllDoctors(limit: number, page: number): Promise<DoctorResponse[]> {
+		async getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }>  {
 			return await medicRepository.getAllDoctors(limit, page)
 		},
 
@@ -38,12 +39,31 @@ export async function makeDoctorService() {
 				createdAt: user.createdAt,
 			}
 		},
+		
+		async createDoctorByAdmin(doctorCreate: DoctorCreateByAdmin): Promise<UserResponse> {
+			const password = genericPassword()
+			const hashedPassword = await hashPassword(password)
+			const user: User | null = await medicRepository.createDoctorByAdmin(doctorCreate, hashedPassword)
+
+			if (!user) {
+				throw new Error("Failed to create user")
+			}
+
+			return {
+				id: user.id,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				email: user.email,
+				phone: user.phone,
+				createdAt: user.createdAt,
+			}
+		},
 
 		async getPatientByID(id: string, userDoctor: CurrentUser): Promise<PatientResponse | null> {
 			return await medicRepository.getPatientByID(Number(id), userDoctor)
 		},
 
-		async getDoctorsBySpecialtyID(id: string, limit: number, page: number): Promise<DoctorResponse[]> {
+		async getDoctorsBySpecialtyID(id: string, limit: number, page: number): Promise<{doctors: DoctorResponse[], total: number}> {
 			return await medicRepository.getDoctorsBySpecialtyID(Number(id), limit, page)
 		},
 
