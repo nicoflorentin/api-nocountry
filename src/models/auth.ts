@@ -1,28 +1,15 @@
-import { z } from "zod";
+import { Doctor } from "./doctor";
+import { Patient } from "./patient";
 
-export interface LoginCredentials {
+export interface CurrentUser {
+  id: number;
+  firstName: string;
+  lastName: string;
   email: string;
-  password: string;
+  role: string;
+  url_image?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  data: null | Patient | Doctor
 }
-
-export const LoginSchema = z.object({
-  email: z.email({ message: "Email inválido" }),
-  // password: z.string().regex(passwordRegex, {
-  //   message:
-  //     "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un símbolo especial",
-  // }),
-  password: z
-    .string()
-    .min(8, { message: "La contraseña debe tener al menos 8 caracteres" })
-    .refine((val) => /[A-Z]/.test(val), {
-      message: "Debe contener al menos una letra mayúscula",
-    })
-    .refine((val) => /\d/.test(val), {
-      message: "Debe contener al menos un número",
-    })
-    .refine((val) => /[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>/?]/.test(val), {
-      message: "Debe contener al menos un carácter especial",
-    }),
-});
-
 

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { getClaimsFromToken, TokenClaims } from "../utils/token";
 import { makeUserRepository } from "../repositories/user";
+import { makeAuthRepository } from "../repositories/auth";
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
@@ -12,9 +13,9 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const userRepo = await makeUserRepository();
+    const authRepo = await makeAuthRepository();
     const userId = typeof claims.id === "string" ? parseInt(claims.id, 10) : claims.id;
-    const user = await userRepo.getUserByID(userId);
+    const user = await authRepo.getCurrentUserByID(userId);
     if (!user) return res.status(401).json({ error: "Not authenticated" });
 
     res.locals.user = user;

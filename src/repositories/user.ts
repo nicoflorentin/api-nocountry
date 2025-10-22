@@ -1,6 +1,7 @@
 import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
+import { updateUserImage } from "../controllers/user";
 
 export interface UserRepository {
   getUserByID(id: number): Promise<User | null>;
@@ -11,15 +12,28 @@ export interface UserRepository {
 }
 
 export async function makeUserRepository() {
-  const connection = await getPool();
+  const pool = await getPool();
+  const conn = await pool.getConnection();
   return {
     async getUserByID(id: number): Promise<User | null> {
       try {
-        const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
           "SELECT * FROM users WHERE id = ?",
           [id]
         );
-        return rows[0] as User || null;
+
+        const user: User = {
+          id: rows[0].id,
+          firstName: rows[0].first_name,
+          lastName: rows[0].last_name,
+          email: rows[0].email,
+          password: rows[0].password,
+          role: rows[0].role,
+          createdAt: rows[0].created_at,
+          updatedAt: rows[0].updated_at
+        }
+
+        return user || null;
       } catch (error) {
         console.error('Error in getUserByID:', error);
         throw new Error('Failed to fetch user by ID');
@@ -28,72 +42,40 @@ export async function makeUserRepository() {
 
     async getAllUsers(): Promise<User[]> {
       try {
-        const [rows] = await connection.query<mysql.RowDataPacket[]>(
-          "SELECT * FROM users"
-        );
-        return rows as User[];
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>("SELECT * FROM users");
+
+        return (rows as any[]).map(row => ({
+          id: row.id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          email: row.email,
+          password: row.password,
+          role: row.role,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        }));
       } catch (error) {
         console.error('Error in getAllUsers:', error);
         throw new Error('Failed to fetch users');
       }
     },
 
-    async createUser(user: UserCreate): Promise<User> {
+    async updateUserImage(url: string, userId: number): Promise<boolean | null> {
       try {
-        const [result] = await connection.execute<mysql.ResultSetHeader>(
-          "INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)",
-          [user.firstName, user.lastName, user.email, user.password]
-        );
-        
-        const [newUser] = await connection.execute<mysql.RowDataPacket[]>(
-          "SELECT * FROM users WHERE id = ?",
-          [result.insertId]
-        );
-        
-        return newUser[0] as User;
-      } catch (error) {
-        console.error('Error in createUser:', error);
-        throw new Error('Failed to create user');
-      }
-    },
-
-    async updateUser(id: number, user: Partial<User>): Promise<User | null> {
-      try {
-        const fields = Object.keys(user).map(key => `${key} = ?`).join(', ');
-        const values = [...Object.values(user), id];
-
-        const [result] = await connection.execute<mysql.ResultSetHeader>(
-          `UPDATE users SET ${fields} WHERE id = ?`,
-          values
+        const [result] = await conn.execute<mysql.ResultSetHeader>(
+          "UPDATE users SET url_image = ? WHERE id = ?",
+          [url, userId]
         );
 
         if (result.affectedRows === 0) {
-          return null;
+          return false;
         }
 
-        const [updatedUser] = await connection.execute<mysql.RowDataPacket[]>(
-          "SELECT * FROM users WHERE id = ?",
-          [id]
-        );
-
-        return updatedUser[0] as User;
+        return true;
       } catch (error) {
-        console.error('Error in updateUser:', error);
-        throw new Error('Failed to update user');
-      }
-    },
-
-    async deleteUser(id: number): Promise<boolean> {
-      try {
-        const [result] = await connection.execute<mysql.ResultSetHeader>(
-          "DELETE FROM users WHERE id = ?",
-          [id]
-        );
-        return result.affectedRows > 0;
-      } catch (error) {
-        console.error('Error in deleteUser:', error);
-        throw new Error('Failed to delete user');
+        console.error('Error in updateUserImage:', error);
+        throw new Error('Failed to update user image');
       }
     }
-  };
+  }
 }
