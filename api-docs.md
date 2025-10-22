@@ -2,7 +2,8 @@
 create user
 get user by id
 get all users
-delete user by id
+put is_active
+<!-- delete user by id -->
 
 ### crud doctor
 create doctor
@@ -10,21 +11,21 @@ get doctor by id
 get all doctors
 get doctors by patient id
 edit doctor by id
-delete doctor by id
+<!-- delete doctor by id -->
 
 ### crud patient
 create patient
 get patient by id
 get all patients
 edit patient by id
-delete patient by id
+<!-- delete patient by id -->
 
 ### crud health summarie
 create health summarie
 get health summarie by id
 get health summaries by patient
 edit health summarie by id
-delete health summarie by id
+<!-- delete health summarie by id -->
 
 ### crud availabilities
 create availabilitie
