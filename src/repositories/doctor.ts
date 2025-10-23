@@ -326,7 +326,7 @@ export async function makeDoctorRepository() {
 
 				const [rowsSpeciality] = await conn.execute<mysql.RowDataPacket[]>(
 					"SELECT * FROM specialties WHERE id = ?",
-					[doctorCreate.specialityId]
+					[doctorCreate.specialtyId]
 				);
 
 				if (rowsSpeciality.length === 0) {
@@ -335,7 +335,7 @@ export async function makeDoctorRepository() {
 
 				const [_] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO doctors (user_id, specialty_id, license_number, bio) VALUES (?, ?, ?, ?)",
-					[newUser[0].id, doctorCreate.specialityId, doctorCreate.licenseNumber, doctorCreate.bio]
+					[newUser[0].id, doctorCreate.specialtyId, doctorCreate.licenseNumber, doctorCreate.bio]
 				);
 
 				await conn.commit();

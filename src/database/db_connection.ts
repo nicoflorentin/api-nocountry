@@ -37,8 +37,9 @@ async function createDefaultAdmin(pool: mysql.Pool) {
 		const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM users WHERE email = ?", [ADMIN_EMAIL])
 
 		if (rows.length === 0) {
-      const password = genericPassword();
-			const hashedPassword = await hashPassword(password)
+			const hashedPassword = await hashPassword(ADMIN_PASSWORD)
+      // const password = genericPassword();
+			// const hashedPassword = await hashPassword(password)
 
 			const insertQuery = `
         INSERT INTO users 
@@ -57,10 +58,10 @@ async function createDefaultAdmin(pool: mysql.Pool) {
 
 			await pool.query(insertQuery, values)
 
-      const name = `${ADMIN_FIRST_NAME} ${ADMIN_LAST_NAME}`
-      const email = ADMIN_EMAIL
+      // const name = `${ADMIN_FIRST_NAME} ${ADMIN_LAST_NAME}`
+      // const email = ADMIN_EMAIL
 
-      await sendEmailCreateUser(name, email, password)
+      // await sendEmailCreateUser(name, email, password)
 			console.log("✅ Usuario administrador por defecto creado exitosamente.")
 		} else {
 			console.log("ℹ️ El usuario administrador por defecto ya existe. No se creó.")

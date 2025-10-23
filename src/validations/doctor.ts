@@ -47,5 +47,5 @@ export const DoctorCreateByAdminSchema = z.object({
   email: z.email({ message: "Email inválido" }),
   licenseNumber: z.string().min(1, { message: "La licencia no puede estar vacia" }),
   bio: z.string(),
-  specialityId: z.number().min(1, { message: "La especialidad no puede estar vacia" }),
+  specialtyId: z.number().min(1, { message: "La especialidad no puede estar vacia" }),
 });

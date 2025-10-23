@@ -3,6 +3,7 @@ import { DoctorCreate, DoctorCreateByAdmin, DoctorResponse, DoctorUpdate } from 
 import { PatientResponse } from "../models/patient"
 import { User, UserResponse } from "../models/user"
 import { makeDoctorRepository } from "../repositories/doctor"
+import { sendEmailCreateUser } from "../utils/email"
 import { genericPassword } from "../utils/generic_pass"
 import { hashPassword } from "../utils/hash_password"
 
@@ -18,7 +19,7 @@ export async function makeDoctorService() {
 			return medic
 		},
 
-		async getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }>  {
+		async getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }> {
 			return await medicRepository.getAllDoctors(limit, page)
 		},
 
@@ -39,7 +40,7 @@ export async function makeDoctorService() {
 				createdAt: user.createdAt,
 			}
 		},
-		
+
 		async createDoctorByAdmin(doctorCreate: DoctorCreateByAdmin): Promise<UserResponse> {
 			const password = genericPassword()
 			const hashedPassword = await hashPassword(password)
@@ -48,6 +49,10 @@ export async function makeDoctorService() {
 			if (!user) {
 				throw new Error("Failed to create user")
 			}
+
+			const name = `${doctorCreate.firstName} ${doctorCreate.lastName}`
+			const email = doctorCreate.email
+			await sendEmailCreateUser(name, email, password)
 
 			return {
 				id: user.id,
@@ -63,7 +68,7 @@ export async function makeDoctorService() {
 			return await medicRepository.getPatientByID(Number(id), userDoctor)
 		},
 
-		async getDoctorsBySpecialtyID(id: string, limit: number, page: number): Promise<{doctors: DoctorResponse[], total: number}> {
+		async getDoctorsBySpecialtyID(id: string, limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }> {
 			return await medicRepository.getDoctorsBySpecialtyID(Number(id), limit, page)
 		},
 
@@ -74,6 +79,6 @@ export async function makeDoctorService() {
 		async updateDoctor(doctorUpdate: DoctorUpdate): Promise<boolean> {
 			return await medicRepository.updateDoctor(doctorUpdate)
 		},
-		
+
 	}
 }

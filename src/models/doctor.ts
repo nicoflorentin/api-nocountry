@@ -21,7 +21,7 @@ export interface DoctorCreateByAdmin {
   lastName: string;
   email: string;
   phone?: string;
-  specialityId: number;
+  specialtyId: number;
   licenseNumber: string;
   bio?: string;
 }
