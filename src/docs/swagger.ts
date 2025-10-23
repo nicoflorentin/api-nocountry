@@ -35,7 +35,7 @@ const swaggerOptions = {
         // Usamos path.resolve para rutas absolutas más seguras
         path.resolve(__dirname, '../routes/**/*.ts'),
         path.resolve(__dirname, '../routes/**/*.js'),
-        path.resolve(__dirname, './*.ts'),
+        path.resolve(__dirname, './*.ts'), 
         path.resolve(__dirname, './*.js'),
         path.resolve(__dirname, './schemas/*.ts'),
         path.resolve(__dirname, './schemas/*.js'),
