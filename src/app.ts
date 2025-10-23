@@ -3,9 +3,7 @@ import morgan from "morgan";
 import cors from "cors";
 import { router } from "./routes";
 import { initDB } from "./database/db_connection";
-import swaggerJSDoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
-import path from "path";
+import { swaggerRouter } from "./docs/swagger";
 import { logger } from "./middleware/logger";
 
 export const app = express();
@@ -16,48 +14,8 @@ initDB().catch(error => {
   process.exit(1); // Salir si no se puede inicializar la base de datos
 });
 
-const swaggerOptions = {
-  definition: {
-    openapi: "3.0.0", 
-    info: {
-      title: "API de No Country",
-      version: "1.0.0",
-      description: "Documentación generada con Swagger para Express",
-    },
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-    servers: [
-      {
-        url: process.env.SERVER_URL || `https://www.nocountry.saltaget.com`,
-      },
-      {
-        url: `http://localhost:${process.env.PORT || 3001}`,
-      },
-    ],
-  },
-  apis: [
-    // include both TS (dev) and JS (built) files so swagger works in both envs
-    path.join(__dirname, "./routes/**/*.ts"),
-    path.join(__dirname, "./routes/**/*.js"),
-    path.join(__dirname, "./docs/schemas/*.ts"),
-    path.join(__dirname, "./docs/schemas/*.js"),
-    // when compiled with rootDir="./" TS may emit files under dist/src/... so include those paths too
-    path.join(__dirname, "./src/routes/**/*.js"),
-    path.join(__dirname, "./src/docs/schemas/*.js")
-  ],
-};
-
-const swaggerDocs = swaggerJSDoc(swaggerOptions);
-
 app.use(express.json());
-app.use("/api/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use(swaggerRouter);
 
 // CORS primero
 const allowedOrigins = (process.env.CORS_ORIGIN || "").split(",");
@@ -84,13 +42,13 @@ app.use(cors(corsOptions));
 // app.use(cookieParser());
 
 // Middleware
-app.use(logger); 
+app.use(logger);
 
 // Logging
 app.use(morgan("dev"));
 app.use(router)
 // Test endpoint
-router.use('/api/hello', (req, res)=> {
+router.use('/api/hello', (req, res) => {
   res.send('hello world')
 })
 
