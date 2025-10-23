@@ -16,6 +16,16 @@ export interface DoctorCreate {
   bio?: string;
 }
 
+export interface DoctorCreateByAdmin {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  specialtyId: number;
+  licenseNumber: string;
+  bio?: string;
+}
+
 export interface DoctorUpdate {
   id: number;
   firstName: string;
@@ -32,4 +42,7 @@ export interface DoctorResponse {
   createdAt: Date;
   speciality: string;
   licenseNumber: string;
+  urlImage: string | null;
+  isActive: boolean;
+  phone: string | null;
 }

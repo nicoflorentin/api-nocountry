@@ -8,7 +8,7 @@ export async function makeUserService() {
 
   return {
     async updateUserImage(file: Express.Multer.File, user: CurrentUser): Promise<boolean> {
-      const oldUrlImage = user.url_image;
+      const oldUrlImage = user.urlImage;
 
       const imageUrl = await uploadImage(file.path);
 

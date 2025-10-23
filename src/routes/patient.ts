@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { createPatient, getAllPatients, getPatientByID } from "../controllers/patient"
+import { createPatient, createPatientByAdmin, getAllPatients, getPatientByID, getPatientsByName } from "../controllers/patient"
 
 /**
  * @swagger
@@ -8,38 +8,6 @@ import { createPatient, getAllPatients, getPatientByID } from "../controllers/pa
  *   description: Operaciones relacionadas con pacientes
  */
 export const patient = Router()
-
-/**
- * @swagger
- * /api/patient/{id}:
- *   get:
- *     summary: Obtener paciente por ID
- *     tags: [Patient]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         description: ID del paciente
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Detalles del paciente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 patient:
- *                   $ref: '#/components/schemas/PatientResponse'
- *       404:
- *         description: Paciente no encontrado
- *       500:
- *         description: Error interno del servidor
- */
-patient.get("/:id", getPatientByID)
 
 /**
  * @swagger
@@ -74,6 +42,8 @@ patient.get("/:id", getPatientByID)
  */
 patient.post("/create", createPatient)
 
+patient.post("/create_by_admin", createPatientByAdmin)
+
 /**
  * @swagger
  * /api/patient:
@@ -98,3 +68,62 @@ patient.post("/create", createPatient)
  *         description: Error interno del servidor
  */
 patient.get("/", getAllPatients)
+
+/**
+ * @swagger
+ * /api/patient/search:
+ *   get:
+ *     summary: Obtener pacientes por nombre
+ *     tags: [Patient]
+ *     parameters:
+ *       - name: name
+ *         in: query
+ *         required: true
+ *         description: Nombre del paciente
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pacientes obtenidos exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PatientResponse[]'
+ *       400:
+ *         description: Datos inválidos
+ *       500:
+ *         description: Error interno del servidor
+ */
+patient.get("/search", getPatientsByName)
+
+/**
+ * @swagger
+ * /api/patient/{id}:
+ *   get:
+ *     summary: Obtener paciente por ID
+ *     tags: [Patient]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: ID del paciente
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detalles del paciente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 patient:
+ *                   $ref: '#/components/schemas/PatientResponse'
+ *       404:
+ *         description: Paciente no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+patient.get("/:id", getPatientByID)
