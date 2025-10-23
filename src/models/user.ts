@@ -4,10 +4,10 @@ export interface User {
   lastName: string;
   email: string;
   phone?: string;
-  phone_code?: string;
   password: string;
-  url_image?: string;
+  urlImage?: string;
   role: string;
+  isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
