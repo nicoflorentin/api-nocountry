@@ -2,6 +2,7 @@ import { createPatientByAdmin } from "../controllers/patient";
 import { PatientCreate, PatientCreateByAdmin, PatientResponse } from "../models/patient";
 import { User, UserCreate, UserResponse } from "../models/user";
 import { makePatientRepository } from "../repositories/patient";
+import { sendEmailCreateUser } from "../utils/email";
 import { genericPassword } from "../utils/generic_pass";
 import { hashPassword } from "../utils/hash_password";
 
@@ -29,7 +30,7 @@ export async function makePatientService() {
       return userResponse;
     },
 
-    async getAllPatients(limit: number, page: number): Promise<{patients: PatientResponse[], total: number}> {
+    async getAllPatients(limit: number, page: number): Promise<{ patients: PatientResponse[], total: number }> {
       return await patientRepository.getAllPatients(limit, page);
     },
 
@@ -54,6 +55,10 @@ export async function makePatientService() {
       if (user == null) {
         return null;
       }
+
+      const name = `${createPatient.firstName} ${createPatient.lastName}`
+      const email = createPatient.email
+      await sendEmailCreateUser(name, email, pass)
 
       const userResponse: UserResponse = {
         id: user.id,
