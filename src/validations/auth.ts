@@ -23,3 +23,23 @@ export const LoginSchema = z.object({
 	//   message: "Debe contener al menos un carácter especial",
 	// }),
 })
+
+export const ChangePasswordSchema = z.object({
+	currentPassword: z.string().min(1, { message: "La contraseña actual no puede estar vacía" }),
+	newPassword: z.string().min(1, { message: "La nueva contraseña no puede estar vacía" }),
+	// newPassword: z.string().regex(passwordRegex, {
+	// 	message: "La nueva contraseña debe cumplir con los requisitos de seguridad.",
+	// }),
+	repeatNewPassword: z.string().min(1).trim().min(1, { message: "Debes repetir la nueva contraseña" }),
+}).refine((data) => data.newPassword === data.repeatNewPassword, {
+	path: ["repeatNewPassword"],
+	message: "Las contraseñas nuevas no coinciden",
+}).superRefine((data, ctx) => {
+	if (data.currentPassword === data.newPassword) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["newPassword"],
+			message: "La nueva contraseña no puede ser igual a la contraseña actual.",
+		});
+	}
+});

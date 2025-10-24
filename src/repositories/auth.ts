@@ -8,6 +8,7 @@ import { CurrentUser } from "../models/auth";
 
 export interface AuthRepository {
   login(credentials: LoginCredentials): Promise<User | null>;
+  getUserPasswordById(userId: number): Promise<{ password: string } | null>;
 }
 
 export async function makeAuthRepository() {
@@ -25,8 +26,8 @@ export async function makeAuthRepository() {
         console.error('Error in login:', error);
         throw new Error('Credenciales incorrectas');
       } finally {
-				conn.release();
-			}
+        conn.release();
+      }
     },
 
     async getCurrentUserByID(id: number): Promise<CurrentUser | null> {
@@ -118,8 +119,42 @@ export async function makeAuthRepository() {
         console.error('Error in getUserByID:', error);
         throw new Error('Failed to fetch user by ID');
       } finally {
-				conn.release();
-			}
+        conn.release();
+      }
+    },
+
+    async getUserPasswordById(userId: number): Promise<{ password: string } | null> {
+      const conn = await pool.getConnection();
+      try {
+        // Seleccionamos solo la contraseña, lo que es más eficiente y seguro
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+          "SELECT password FROM users WHERE id = ?",
+          [userId]
+        );
+        // Devolvemos el hash y el ID del usuario (o solo el hash)
+        return rows.length ? { password: rows[0].password } : null;
+      } catch (error) {
+        console.error('Error in getUserPasswordById:', error);
+        throw new Error('Failed to fetch user password');
+      } finally {
+        conn.release();
+      }
+    },
+
+    async updatePassword(userId: number, hashedPassword: string): Promise<boolean> {
+      const conn = await pool.getConnection();
+      try {
+        const [result] = await conn.execute<mysql.ResultSetHeader>(
+          "UPDATE users SET password = ? WHERE id = ?",
+          [hashedPassword, userId]
+        );
+        return result.affectedRows > 0;
+      } catch (error) {
+        console.error('Error al actualizar contraseña:', error);
+        throw new Error('Failed to update password');
+      } finally {
+        conn.release();
+      }
     },
   };
 }

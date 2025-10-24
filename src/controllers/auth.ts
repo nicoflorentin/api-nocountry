@@ -3,6 +3,8 @@ import { User, UserResponse } from "../models/user";
 import { LoginCredentials, LoginSchema } from "../validations/auth";
 import { makeAuthService } from "../services/auth";
 import { CurrentUser } from "../models/auth";
+import { ChangePasswordSchema } from "../validations/auth"; 
+
 
 let authService: Awaited<ReturnType<typeof makeAuthService>>;
 
@@ -46,3 +48,38 @@ export const currentUser = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export const changePassword = async (req: Request, res: Response) => {
+  const result = ChangePasswordSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      errors: result.error.issues.map((e) => ({
+        field: e.path.join("."),
+        message: e.message,
+      })),
+    });
+  }
+
+  try {
+    //Obtener ID del usuario autenticado 
+    const user = res.locals.user as CurrentUser;
+    const userId = user.id;
+
+    const { currentPassword, newPassword } = result.data;
+
+    // Llamar al servicio
+    await authService.changePassword(userId, currentPassword, newPassword);
+
+    return res.status(200).json({ message: "Contraseña actualizada exitosamente." });
+  } catch (error: any) {
+    console.error("Error changing password:", error);
+
+    // Manejo de errores específicos de negocio
+    if (error.message === "CURRENT_PASSWORD_MISMATCH") {
+      return res.status(401).json({ error: "La contraseña actual es incorrecta." });
+    }
+
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
