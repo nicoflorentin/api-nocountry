@@ -5,6 +5,7 @@ import { makePatientRepository } from "../repositories/patient";
 import { sendEmailCreateUser } from "../utils/email";
 import { genericPassword } from "../utils/generic_pass";
 import { hashPassword } from "../utils/hash_password";
+import { PatientUpdate } from "../models/patient";
 
 export async function makePatientService() {
   const patientRepository = await makePatientRepository();
@@ -69,6 +70,17 @@ export async function makePatientService() {
       };
 
       return userResponse;
+    },
+
+    async updatePatient(id: string, patientUpdate: PatientUpdate): Promise<PatientResponse> {
+      
+      const updatedPatient = await patientRepository.updatePatient(Number(id), patientUpdate);
+
+      if (!updatedPatient) {
+        throw new Error('Patient not found');
+      }
+
+      return updatedPatient;
     },
   };
 }

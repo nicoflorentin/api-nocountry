@@ -1,14 +1,16 @@
 import { User, UserCreate } from "../models/user";
 import mysql from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
-import { PatientCreate, PatientCreateByAdmin, PatientResponse } from "../models/patient";
+import { PatientCreate, PatientCreateByAdmin, PatientResponse,PatientUpdate } from "../models/patient";
 import { createPatientByAdmin } from "../controllers/patient";
+
 
 export interface PacientRepository {
   getPatientByID(id: number): Promise<PatientResponse | null>;
   getAllPatients(): Promise<PatientResponse[]>;
   createPatient(patient: PatientCreate): Promise<PatientResponse>;
-  updatePatient(id: number, patient: Partial<PatientResponse>): Promise<PatientResponse | null>;
+  //updatePatient(id: number, patient: Partial<PatientResponse>): Promise<PatientResponse | null>;
+  updatePatient(id: number, patientUpdate: PatientUpdate): Promise<PatientResponse | null>;
   deletePatient(id: number): Promise<boolean>;
 }
 
@@ -228,6 +230,89 @@ export async function makePatientRepository() {
         conn.release();
       }
     },
+
+    async updatePatient(id: number, patientUpdate: PatientUpdate): Promise<PatientResponse | null> {
+      const conn = await pool.getConnection();
+
+      //Separar campos de Users y Patients
+      const userFields: Record<string, any> = {};
+      const patientFields: Record<string, any> = {};
+
+      // Mapeo de camelCase a snake_case para SQL
+      const userKeys = ['firstName', 'lastName', 'email', 'phone', 'urlImage', 'isActive'];
+      const patientKeys = ['dateOfBirth', 'gender', 'identification', 'typeIdentification', 'nationality'];
+
+      for (const [key, value] of Object.entries(patientUpdate)) {
+        if (value === undefined) continue; 
+
+        if (userKeys.includes(key)) {
+          // Convertir a snake_case para la tabla users
+          const sqlKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          userFields[sqlKey] = value;
+        } else if (patientKeys.includes(key)) {
+          // Convertir a snake_case para la tabla patients
+          const sqlKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          patientFields[sqlKey] = value;
+        }
+      }
+
+      if (Object.keys(userFields).length === 0 && Object.keys(patientFields).length === 0) {
+        // No hay campos para actualizar, pero devolvemos el registro actual.
+        return this.getPatientByID(id);
+      }
+
+      try {
+        await conn.beginTransaction();
+
+        // Obtener user_id del patient
+        const [patientRow] = await conn.execute<mysql.RowDataPacket[]>(
+          "SELECT user_id FROM patients WHERE id = ?", [id]
+        );
+
+        if (patientRow.length === 0) {
+          await conn.rollback();
+          return null; 
+        }
+        const userId = patientRow[0].user_id;
+
+        // Actualizar la tabla users (si hay campos)
+        if (Object.keys(userFields).length > 0) {
+          const userSetClause = Object.keys(userFields).map(key => `${key} = ?`).join(', ');
+          const userValues = Object.values(userFields);
+
+          await conn.execute(
+            `UPDATE users SET ${userSetClause} WHERE id = ?`,
+            [...userValues, userId]
+          );
+        }
+
+        // Actualizar la tabla patients (si hay campos)
+        if (Object.keys(patientFields).length > 0) {
+          const patientSetClause = Object.keys(patientFields).map(key => `${key} = ?`).join(', ');
+          const patientValues = Object.values(patientFields);
+
+          await conn.execute(
+            `UPDATE patients SET ${patientSetClause} WHERE id = ?`,
+            [...patientValues, id]
+          );
+        }
+
+        await conn.commit();
+
+        // Devolver el paciente actualizado (usando el método ya existente)
+        return this.getPatientByID(id);
+
+      } catch (error) {
+        await conn.rollback();
+        console.error('Error al actualizar paciente:', error);
+        
+        throw error;
+      } finally {
+        conn.release();
+      }
+    },
+
+
 
     // async updateUser(id: number, user: Partial<User>): Promise<User | null> {
     //   try {

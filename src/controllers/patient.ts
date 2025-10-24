@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { makePatientService } from "../services/patient"
-import { PatientCreateByAdminSchema, PatientCreateSchema } from "../validations/patient"
-import { PatientCreate, PatientCreateByAdmin, PatientResponse } from "../models/patient"
+import { PatientCreateByAdminSchema, PatientCreateSchema, PatientUpdateSchema } from "../validations/patient"
+import { PatientCreate, PatientCreateByAdmin, PatientResponse, PatientUpdate } from "../models/patient"
 import { UserResponse } from "../models/user"
 
 let patientService: Awaited<ReturnType<typeof makePatientService>>
@@ -149,5 +149,52 @@ export const createPatientByAdmin = async (req: Request, res: Response) => {
 			}
 		}
 		return res.status(500).json({ error: "Internal server error" })
+	}
+}
+
+export const updatePatient = async (req: Request, res: Response) => {
+	try {
+		if (!patientService) {
+			throw new Error("Patient service not initialized")
+		}
+
+		// Validar ID de la URL
+		const { id } = req.params;
+		const result = PatientUpdateSchema.safeParse(req.body);
+
+		if (!result.success) {
+			return res.status(400).json({
+				errors: result.error.issues.map((e) => ({
+					field: e.path.join("."),
+					message: e.message,
+				})),
+			})
+		}
+
+		const patientUpdateData = result.data as PatientUpdate;
+
+		// Llamar al servicio
+		const updatedPatient = await patientService.updatePatient(id, patientUpdateData);
+
+		// Responder con éxito
+		return res.status(200).json({ patient: updatedPatient });
+
+	} catch (error: any) {
+		if (error instanceof Error && error.message === "Patient not found") {
+			return res.status(404).json({ error: "Patient not found" });
+		}
+
+		// Manejo de errores de base de datos 
+		if (error.code === "ER_DUP_ENTRY") {
+			// La lógica de error 409 es correcta y se puede reutilizar o mejorar
+			if (error.message.includes("email")) {
+				return res.status(409).json({ error: "El email ya está registrado." })
+			} else if (error.message.includes("type_identification") || error.message.includes("identification")) {
+				return res.status(409).json({ error: "La identificación ya está registrada." })
+			}
+		}
+
+		console.error("Error updating patient:", error);
+		return res.status(500).json({ error: "Internal server error" });
 	}
 }

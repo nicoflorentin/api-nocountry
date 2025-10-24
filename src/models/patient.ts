@@ -49,3 +49,16 @@ export interface PatientCreateByAdmin {
   typeIdentification: 'dni' | 'cc' | 'ci';
   nationality: string;
 }
+
+export interface PatientUpdate {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+
+  dateOfBirth?: Date;
+  gender?: 'male' | 'female' | 'other';
+  identification?: string;
+  typeIdentification?: 'dni' | 'cc' | 'ci';
+  nationality?: string;
+}

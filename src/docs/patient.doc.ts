@@ -121,3 +121,46 @@
  *       500:
  *         description: Error interno del servidor
  */
+
+/**
+ * @swagger
+ * /api/patient/{id}:
+ *   patch:
+ *     summary: Actualiza la información parcial de un paciente y su usuario
+ *     tags: [Patient]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID del paciente a actualizar.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PatientUpdate'
+ *     responses:
+ *       200:
+ *         description: Paciente actualizado exitosamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 patient:
+ *                   $ref: '#/components/schemas/PatientResponse'
+ *       400:
+ *         description: Error de validación (datos de entrada incorrectos o campos vacíos).
+ *       401:
+ *         description: No autorizado (Token JWT inválido o ausente).
+ *       404:
+ *         description: Paciente no encontrado con el ID proporcionado.
+ *       409:
+ *         description: Conflicto de datos (Email o Identificación ya registrados).
+ *       500:
+ *         description: Error interno del servidor.
+ */
