@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getAllDoctors, getDoctorByID, createDoctor } from "../controllers/doctor"
+import { getAllDoctors, getDoctorByID, createDoctor, getPatientByID, getDoctorsBySpecialtyID, getDoctorsByName, updateDoctor } from "../controllers/doctor"
 import { get } from "http"
 
 /**
