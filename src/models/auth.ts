@@ -7,7 +7,9 @@ export interface CurrentUser {
   lastName: string;
   email: string;
   role: string;
-  url_image?: string;
+  urlImage?: string;
+  isActive: boolean;
+  phone?: string;
   createdAt?: Date;
   updatedAt?: Date;
   data: null | Patient | Doctor

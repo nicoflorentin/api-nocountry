@@ -11,11 +11,12 @@ export interface AuthRepository {
 }
 
 export async function makeAuthRepository() {
-  const connection = await getPool();
+  const pool = await getPool();
   return {
     async login(credentials: LoginCredentials): Promise<User | null> {
+      const conn = await pool.getConnection();
       try {
-        const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
           "SELECT * FROM users WHERE email = ?",
           [credentials.email]
         );
@@ -23,12 +24,15 @@ export async function makeAuthRepository() {
       } catch (error) {
         console.error('Error in login:', error);
         throw new Error('Credenciales incorrectas');
-      }
+      } finally {
+				conn.release();
+			}
     },
 
     async getCurrentUserByID(id: number): Promise<CurrentUser | null> {
+      const conn = await pool.getConnection();
       try {
-        const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+        const [rows] = await conn.execute<mysql.RowDataPacket[]>(
           "SELECT * FROM users WHERE id = ?",
           [id]
         );
@@ -43,8 +47,10 @@ export async function makeAuthRepository() {
           lastName: rows[0].last_name,
           email: rows[0].email,
           role: rows[0].role,
-          url_image: rows[0].url_image,
-          password: rows[0].password
+          urlImage: rows[0].url_image,
+          password: rows[0].password,
+          phone: rows[0].phone,
+          isActive: rows[0].is_active
         };
 
         let data: null | Patient | Doctor = null;
@@ -54,7 +60,7 @@ export async function makeAuthRepository() {
             data = null;
             break;
           case "medico":
-            const [rowsDoctor] = await connection.execute<mysql.RowDataPacket[]>(
+            const [rowsDoctor] = await conn.execute<mysql.RowDataPacket[]>(
               "SELECT d.id, d.license_number, d.bio, s.name FROM doctors as d INNER JOIN specialties as s ON d.specialty_id = s.id WHERE user_id = ?",
               [id]
             );
@@ -71,7 +77,7 @@ export async function makeAuthRepository() {
             }
             break;
           case "paciente":
-            const [rowsPatient] = await connection.execute<mysql.RowDataPacket[]>(
+            const [rowsPatient] = await conn.execute<mysql.RowDataPacket[]>(
               "SELECT * FROM patients WHERE user_id = ?",
               [id]
             );
@@ -99,7 +105,9 @@ export async function makeAuthRepository() {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
-          url_image: user.url_image,
+          isActive: user.isActive,
+          phone: user.phone,
+          urlImage: user.urlImage,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
           data: data
@@ -109,7 +117,9 @@ export async function makeAuthRepository() {
       } catch (error) {
         console.error('Error in getUserByID:', error);
         throw new Error('Failed to fetch user by ID');
-      }
+      } finally {
+				conn.release();
+			}
     },
   };
 }
