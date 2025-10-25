@@ -54,7 +54,7 @@ async function createDefaultAdmin(pool: mysql.Pool) {
 				hashedPassword,
 				ADMIN_IS_ACTIVE,
 				ADMIN_ROLE,
-			];
+			]
 
 			await pool.query(insertQuery, values)
 
@@ -72,28 +72,27 @@ async function createDefaultAdmin(pool: mysql.Pool) {
 }
 
 async function createSpecialities(pool: mysql.Pool) {
-  try {
+	try {
+		const specialities = [
+			{ name: "cardiología", description: "Especialidad de cardiología" },
+			{ name: "pediatría", description: "Especialidad de pediatría" },
+			{ name: "neurología", description: "Especialidad de neurología" },
+			{ name: "oncología", description: "Especialidad de oncología" },
+			{ name: "ginecología", description: "Especialidad de ginecología" },
+		]
 
-    const specialities = [
-      { name: "cardiología", description: "Especialidad de cardiología" },
-      { name: "pediatría", description: "Especialidad de pediatría" },
-      { name: "neurología", description: "Especialidad de neurología" },
-      { name: "oncología", description: "Especialidad de oncología" },
-      { name: "ginecología", description: "Especialidad de ginecología" },
-    ];
-    
-    for (const speciality of specialities) {
-      const { name, description } = speciality;
-      const insertQuery = `
+		for (const speciality of specialities) {
+			const { name, description } = speciality
+			const insertQuery = `
       INSERT IGNORE INTO specialties (name, description)
       VALUES (?, ?)
-      `;
-      const values = [name, description];
-      await pool.query(insertQuery, values);
-    }
-  } catch (error) {
-    console.error("❌ Error al crear las especialidades:", error);
-  }
+      `
+			const values = [name, description]
+			await pool.query(insertQuery, values)
+		}
+	} catch (error) {
+		console.error("❌ Error al crear las especialidades:", error)
+	}
 }
 
 async function initializeDatabase() {
@@ -198,8 +197,8 @@ async function initializeDatabase() {
           day_of_week ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday'),
           start_time TIME NOT NULL,
           end_time TIME NOT NULL,
-          rest_start_time TIME NOT NULL,
-          rest_end_time TIME NOT NULL,
+          rest_start_time TIME,
+          rest_end_time TIME,
           period_time INT NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -264,7 +263,7 @@ async function initializeDatabase() {
 
 		await createDefaultAdmin(pool)
 
-    await createSpecialities(pool)
+		await createSpecialities(pool)
 
 		return pool
 	} catch (error) {
