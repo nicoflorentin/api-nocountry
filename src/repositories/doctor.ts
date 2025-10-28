@@ -1,3 +1,5 @@
+// src/repositories/doctor.ts
+
 import { User } from "../models/user"
 import mysql from "mysql2/promise"
 import { getPool } from "../database/db_connection"
@@ -7,24 +9,48 @@ import { CurrentUser } from "../models/auth"
 
 export interface DoctorRepository {
 	getDoctorByID(id: number): Promise<DoctorResponse | null>
-	getAllDoctors(): Promise<DoctorResponse[]>
+	// Se corrige la firma para incluir paginación (como en tu implementación)
+	getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }>
+	// Se mantiene la firma para devolver el DoctorResponse completo
 	createDoctor(doctor: DoctorCreate): Promise<DoctorResponse>
+	// Se mantienen los demás métodos que no se modificaron
+	getDoctorsBySpecialtyID(id: number, limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }>
+	getDoctorsByName(name: string): Promise<DoctorResponse[]>
+	updateDoctor(doctorUpdate: DoctorUpdate): Promise<boolean>
+	createDoctorByAdmin(doctorCreate: DoctorCreateByAdmin, hashedPassword: string): Promise<User>
+	getPatientByID(id: number, userDoctor: CurrentUser): Promise<PatientResponse | null>
 }
+
+// Función de mapeo para simplificar la creación del objeto DoctorResponse
+const mapDoctorRowToResponse = (row: any): DoctorResponse => ({
+	id: row.id, // ID de la tabla doctors (d.id)
+	firstName: row.first_name,
+	lastName: row.last_name,
+	email: row.email,
+	createdAt: new Date(row.created_at),
+	speciality: row.speciality, // Nombre de la especialidad (s.name)
+	licenseNumber: row.license_number,
+	urlImage: row.url_image,
+	isActive: row.is_active,
+	phone: row.phone
+});
+
 
 export async function makeDoctorRepository() {
 	const pool = await getPool()
 
-	return {
+	const repository: DoctorRepository = {
+
 		async getDoctorByID(id: number): Promise<DoctorResponse | null> {
 			const conn = await pool.getConnection()
 			try {
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                  s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone
-           FROM doctors d
-           INNER JOIN users u ON d.user_id = u.id
-           INNER JOIN specialties s ON s.id = d.specialty_id
-           WHERE d.id = ?`,
+                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    FROM doctors d
+                    INNER JOIN users u ON d.user_id = u.id
+                    INNER JOIN specialties s ON s.id = d.specialty_id
+                    WHERE d.id = ?`,
 					[id]
 				)
 
@@ -32,18 +58,7 @@ export async function makeDoctorRepository() {
 					return null
 				}
 
-				return {
-					id: rows[0].id,
-					firstName: rows[0].first_name,
-					lastName: rows[0].last_name,
-					email: rows[0].email,
-					createdAt: new Date(rows[0].created_at),
-					speciality: rows[0].speciality,
-					licenseNumber: rows[0].license_number,
-					urlImage: rows[0].url_image,
-					isActive: rows[0].is_active,
-					phone: rows[0].phone
-				}
+				return mapDoctorRowToResponse(rows[0]);
 			} catch (error) {
 				console.error("Error in getMedicByID:", error)
 				throw new Error("Failed to fetch medic by ID")
@@ -63,31 +78,20 @@ export async function makeDoctorRepository() {
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-          s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone
-					FROM doctors d
-					INNER JOIN users u ON d.user_id = u.id
-					INNER JOIN specialties s ON s.id = d.specialty_id
-					LIMIT ? OFFSET ?`,
+                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    FROM doctors d
+                    INNER JOIN users u ON d.user_id = u.id
+                    INNER JOIN specialties s ON s.id = d.specialty_id
+                    LIMIT ? OFFSET ?`,
 					[limit, offset]
 				);
 
-				const doctors = rows.map((row) => ({
-					id: row.id,
-					firstName: row.first_name,
-					lastName: row.last_name,
-					email: row.email,
-					createdAt: new Date(row.created_at),
-					speciality: row.speciality,
-					licenseNumber: row.license_number,
-					urlImage: row.url_image,
-					isActive: row.is_active,
-					phone: row.phone
-				}))
+				const doctors = rows.map(mapDoctorRowToResponse);
 
 				return {
-          doctors,
-          total
-        };
+					doctors,
+					total
+				};
 			} catch (error) {
 				console.error("Error in getAllMedics:", error)
 				throw new Error("Failed to fetch medics")
@@ -96,28 +100,24 @@ export async function makeDoctorRepository() {
 			}
 		},
 
-		async createDoctor(doctorCreate: DoctorCreate): Promise<User> {
+		async createDoctor(doctorCreate: DoctorCreate): Promise<DoctorResponse> {
 			const conn = await pool.getConnection()
 			const role: string = "medico";
+			let doctorId: number | null = null;
+
 			try {
 				await conn.beginTransaction();
 
-				const [result] = await conn.execute<mysql.ResultSetHeader>(
+				// 1. Insertar USER
+				const [resultUser] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
 					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.password, role]
 				);
+				const userId = resultUser.insertId;
 
-				const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
-					"SELECT * FROM users WHERE id = ?",
-					[result.insertId]
-				);
-
-				if (newUser.length === 0) {
-					throw new Error('Failed to create user');
-				}
-
+				// 2. Verificar y obtener especialidad
 				const [rowsSpeciality] = await conn.execute<mysql.RowDataPacket[]>(
-					"SELECT * FROM specialties WHERE id = ?",
+					"SELECT id FROM specialties WHERE id = ?",
 					[doctorCreate.specialityId]
 				);
 
@@ -125,42 +125,46 @@ export async function makeDoctorRepository() {
 					throw new Error('Speciality not found');
 				}
 
-				const [_] = await conn.execute<mysql.ResultSetHeader>(
+				// 3. Insertar DOCTOR
+				const [resultDoctor] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO doctors (user_id, specialty_id, license_number, bio) VALUES (?, ?, ?, ?)",
-					[newUser[0].id, doctorCreate.specialityId, doctorCreate.licenseNumber, doctorCreate.bio]
+					[userId, doctorCreate.specialityId, doctorCreate.licenseNumber, doctorCreate.bio]
 				);
+				doctorId = resultDoctor.insertId; // Capturamos el ID del registro en 'doctors'
 
 				await conn.commit();
-				return {
-					id: newUser[0].id,
-					firstName: newUser[0].first_name,
-					lastName: newUser[0].last_name,
-					email: newUser[0].email,
-					phone: newUser[0].phone,
-					createdAt: new Date(newUser[0].created_at),
-					password: newUser[0].password,
-					role: newUser[0].role,
-					isActive: newUser[0].is_active
-				};
+
+				// 4. CONSULTA FINAL: Devolver el objeto DoctorResponse completo
+				if (doctorId) {
+					const createdDoctor = await repository.getDoctorByID(doctorId);
+					if (!createdDoctor) {
+						throw new Error('Failed to fetch created doctor record.');
+					}
+					return createdDoctor;
+				}
+
+				throw new Error('Failed to create doctor record.');
+
 			} catch (error) {
 				await conn.rollback();
-				console.error('Error in createPatient:', error);
+				console.error('Error in createDoctor:', error);
 				throw error;
 			} finally {
 				conn.release();
 			}
 		},
 
+
 		async getPatientByID(id: number, userDoctor: CurrentUser): Promise<PatientResponse | null> {
 			const conn = await pool.getConnection()
 			try {
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT p.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at, u.url_image, u.is_active,
-									p.date_of_birth AS dateOfBirth, p.identification, p.type_identification, p.nationality, u.phone
-						 FROM patients p
-						 INNER JOIN users u ON p.user_id = u.id
-						 INNER JOIN doctor_patients dp ON dp.patient_id = p.id
-						 WHERE p.id = ? AND dp.doctor_id = ?`,
+                    p.date_of_birth AS dateOfBirth, p.identification, p.type_identification, p.nationality, u.phone
+                    FROM patients p
+                    INNER JOIN users u ON p.user_id = u.id
+                    INNER JOIN doctor_patients dp ON dp.patient_id = p.id
+                    WHERE p.id = ? AND dp.doctor_id = ?`,
 					[id, userDoctor.id]
 				)
 
@@ -168,6 +172,7 @@ export async function makeDoctorRepository() {
 					return null
 				}
 
+				// Mapeo simplificado (asumiendo que los campos de PatientResponse son camelCase)
 				return {
 					id: rows[0].id,
 					user_id: rows[0].user_id,
@@ -203,34 +208,22 @@ export async function makeDoctorRepository() {
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone
-                         FROM doctors d
-                         INNER JOIN users u ON d.user_id = u.id
-                         INNER JOIN specialties s ON s.id = d.specialty_id
-                         WHERE d.specialty_id = ?
-                         LIMIT ?
-                         OFFSET ?`,
+                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    FROM doctors d
+                    INNER JOIN users u ON d.user_id = u.id
+                    INNER JOIN specialties s ON s.id = d.specialty_id
+                    WHERE d.specialty_id = ?
+                    LIMIT ?
+                    OFFSET ?`,
 					[id, limit, offset]
 				)
 
-				const doctors = (rows as any[]).map(row => ({
-					id: row.id,
-					user_id: row.user_id,
-					firstName: row.first_name,
-					lastName: row.last_name,
-					email: row.email,
-					createdAt: new Date(row.created_at),
-					speciality: row.speciality,
-					licenseNumber: row.license_number,
-					urlImage: row.url_image,
-					isActive: row.is_active,
-					phone: row.phone
-				}))
+				const doctors = rows.map(mapDoctorRowToResponse);
 
 				return {
-          doctors,
-          total
-        };
+					doctors,
+					total
+				};
 			} catch (error) {
 				console.error('Error in getDoctorsBySpecialtyID:', error)
 				throw new Error('Failed to fetch doctors by specialty')
@@ -245,28 +238,16 @@ export async function makeDoctorRepository() {
 				const searchTerm = `%${name}%`;
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone
-                         FROM doctors d
-                         INNER JOIN users u ON d.user_id = u.id
-                         INNER JOIN specialties s ON s.id = d.specialty_id
-                         WHERE u.first_name LIKE ? OR u.last_name LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
-                         LIMIT 10`,
+                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    FROM doctors d
+                    INNER JOIN users u ON d.user_id = u.id
+                    INNER JOIN specialties s ON s.id = d.specialty_id
+                    WHERE u.first_name LIKE ? OR u.last_name LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
+                    LIMIT 10`,
 					[searchTerm, searchTerm, searchTerm]
 				);
 
-				return (rows as any[]).map(row => ({
-					id: row.id,
-					user_id: row.user_id,
-					firstName: row.first_name,
-					lastName: row.last_name,
-					email: row.email,
-					createdAt: new Date(row.created_at),
-					speciality: row.speciality,
-					licenseNumber: row.license_number,
-					urlImage: row.url_image,
-					isActive: row.is_active,
-					phone: row.phone
-				}))
+				return rows.map(mapDoctorRowToResponse)
 			} catch (error) {
 				console.error('Error in getDoctorsByName:', error)
 				throw new Error('Failed to fetch doctors by name')
@@ -280,14 +261,14 @@ export async function makeDoctorRepository() {
 			try {
 				const [rows] = await conn.execute<mysql.ResultSetHeader>(
 					`UPDATE users u
-					INNER JOIN doctors d ON u.id = d.user_id
-					SET
-							u.first_name = ?,
-							u.last_name = ?,
-							d.specialty_id = ?,
-							d.bio = ?
-					WHERE
-							d.id = ?`,
+                    INNER JOIN doctors d ON u.id = d.user_id
+                    SET
+                        u.first_name = ?,
+                        u.last_name = ?,
+                        d.specialty_id = ?,
+                        d.bio = ?
+                    WHERE
+                        d.id = ?`,
 					[doctorUpdate.firstName, doctorUpdate.lastName, doctorUpdate.specialityId, doctorUpdate.bio, doctorUpdate.id]
 				)
 
@@ -325,7 +306,7 @@ export async function makeDoctorRepository() {
 				}
 
 				const [rowsSpeciality] = await conn.execute<mysql.RowDataPacket[]>(
-					"SELECT * FROM specialties WHERE id = ?",
+					"SELECT id FROM specialties WHERE id = ?",
 					[doctorCreate.specialtyId]
 				);
 
@@ -339,6 +320,8 @@ export async function makeDoctorRepository() {
 				);
 
 				await conn.commit();
+
+				// Mapeo a User (ya que esta función es para la creación por admin)
 				return {
 					id: newUser[0].id,
 					firstName: newUser[0].first_name,
@@ -359,4 +342,6 @@ export async function makeDoctorRepository() {
 			}
 		},
 	}
+
+	return repository
 }

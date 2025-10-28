@@ -1,7 +1,22 @@
+// src/routes/availability.ts
+
 import { Router } from "express"
-import { getAllAvailabilities, testAvailability } from "../controllers/availability"
+import {
+    createAvailability,
+    createBulkAvailabilities,
+    getAllAvailabilitiesByDoctor,
+    updateAvailability,
+    deleteAvailability,
+    generateTimeSlotsController,
+} from "../controllers/availability"
 
 export const availabiliyRouter = Router()
 
-availabiliyRouter.get("/test", testAvailability)
-availabiliyRouter.get("/", getAllAvailabilities)
+// Asumiendo que la ruta base es /api/availabilities
+
+availabiliyRouter.post("/", createAvailability)
+availabiliyRouter.post("/bulk", createBulkAvailabilities)
+availabiliyRouter.get("/doctor/:id", getAllAvailabilitiesByDoctor)
+availabiliyRouter.get("/doctor/:id/slots", generateTimeSlotsController)
+availabiliyRouter.patch("/:id", updateAvailability)
+availabiliyRouter.delete("/:id", deleteAvailability)

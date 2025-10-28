@@ -10,3 +10,16 @@ export interface AvailabilityResponse {
 	created_at: Date // TIMESTAMP en MySQL se mapea a Date en TypeScript
 	updated_at: Date // TIMESTAMP en MySQL se mapea a Date en TypeScript
 }
+
+/**
+ * @description Campos requeridos para crear una nueva disponibilidad
+ */
+export interface AvailabilityCreate {
+	doctor_id: number
+	day_of_week: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+	start_time: string
+	end_time: string
+	rest_start_time: string
+	rest_end_time: string
+	period_time: number
+}
