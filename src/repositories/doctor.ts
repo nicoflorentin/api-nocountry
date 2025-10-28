@@ -42,24 +42,22 @@ export async function makeDoctorRepository() {
 					licenseNumber: rows[0].license_number,
 					urlImage: rows[0].url_image,
 					isActive: rows[0].is_active,
-					phone: rows[0].phone
+					phone: rows[0].phone,
 				}
 			} catch (error) {
 				console.error("Error in getMedicByID:", error)
 				throw new Error("Failed to fetch medic by ID")
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
-		async getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }> {
+		async getAllDoctors(limit: number, page: number): Promise<{ doctors: DoctorResponse[]; total: number }> {
 			const conn = await pool.getConnection()
 			try {
-				const offset = (page - 1) * limit;
-				const [countResult] = await conn.execute<mysql.RowDataPacket[]>(
-					'SELECT COUNT(*) as total FROM doctors d'
-				);
-				const total = countResult[0].total;
+				const offset = (page - 1) * limit
+				const [countResult] = await conn.execute<mysql.RowDataPacket[]>("SELECT COUNT(*) as total FROM doctors d")
+				const total = countResult[0].total
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
@@ -69,7 +67,7 @@ export async function makeDoctorRepository() {
 					INNER JOIN specialties s ON s.id = d.specialty_id
 					LIMIT ? OFFSET ?`,
 					[limit, offset]
-				);
+				)
 
 				const doctors = rows.map((row) => ({
 					id: row.id,
@@ -81,56 +79,116 @@ export async function makeDoctorRepository() {
 					licenseNumber: row.license_number,
 					urlImage: row.url_image,
 					isActive: row.is_active,
-					phone: row.phone
+					phone: row.phone,
 				}))
 
 				return {
-          doctors,
-          total
-        };
+					doctors,
+					total,
+				}
 			} catch (error) {
 				console.error("Error in getAllMedics:", error)
 				throw new Error("Failed to fetch medics")
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
 		async createDoctor(doctorCreate: DoctorCreate): Promise<User> {
 			const conn = await pool.getConnection()
-			const role: string = "medico";
+			const role: string = "medico"
 			try {
-				await conn.beginTransaction();
+				await conn.beginTransaction()
 
 				const [result] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
 					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.password, role]
-				);
+				)
 
-				const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
-					"SELECT * FROM users WHERE id = ?",
-					[result.insertId]
-				);
+				const [newUser] = await conn.execute<mysql.RowDataPacket[]>("SELECT * FROM users WHERE id = ?", [
+					result.insertId,
+				])
 
 				if (newUser.length === 0) {
-					throw new Error('Failed to create user');
+					throw new Error("Failed to create user")
 				}
 
 				const [rowsSpeciality] = await conn.execute<mysql.RowDataPacket[]>(
 					"SELECT * FROM specialties WHERE id = ?",
 					[doctorCreate.specialityId]
-				);
+				)
 
 				if (rowsSpeciality.length === 0) {
-					throw new Error('Speciality not found');
+					throw new Error("Speciality not found")
 				}
 
-				const [_] = await conn.execute<mysql.ResultSetHeader>(
+				const [doctorResult] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO doctors (user_id, specialty_id, license_number, bio) VALUES (?, ?, ?, ?)",
 					[newUser[0].id, doctorCreate.specialityId, doctorCreate.licenseNumber, doctorCreate.bio]
-				);
+				)
 
-				await conn.commit();
+				// 4. Crear availabilities por defecto (lunes a viernes)
+				const defaultAvailabilities = [
+					{
+						day: "monday",
+						start: "09:00:00",
+						end: "17:00:00",
+						restStart: "13:00:00",
+						restEnd: "14:00:00",
+						period: 30,
+					},
+					{
+						day: "tuesday",
+						start: "09:00:00",
+						end: "17:00:00",
+						restStart: "13:00:00",
+						restEnd: "14:00:00",
+						period: 30,
+					},
+					{
+						day: "wednesday",
+						start: "09:00:00",
+						end: "17:00:00",
+						restStart: "13:00:00",
+						restEnd: "14:00:00",
+						period: 30,
+					},
+					{
+						day: "thursday",
+						start: "09:00:00",
+						end: "17:00:00",
+						restStart: "13:00:00",
+						restEnd: "14:00:00",
+						period: 30,
+					},
+					{
+						day: "friday",
+						start: "09:00:00",
+						end: "17:00:00",
+						restStart: "13:00:00",
+						restEnd: "14:00:00",
+						period: 30,
+					},
+				]
+
+				for (const avail of defaultAvailabilities) {
+					await conn.execute(
+						`INSERT INTO availabilities   
+         (doctor_id, day_of_week, start_time, end_time, rest_start_time, rest_end_time, period_time)  
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+						[
+							doctorResult.insertId,
+							avail.day,
+							avail.start,
+							avail.end,
+							avail.restStart,
+							avail.restEnd,
+							avail.period,
+						]
+					)
+				}
+
+				await conn.commit()
 				return {
 					id: newUser[0].id,
 					firstName: newUser[0].first_name,
@@ -140,14 +198,14 @@ export async function makeDoctorRepository() {
 					createdAt: new Date(newUser[0].created_at),
 					password: newUser[0].password,
 					role: newUser[0].role,
-					isActive: newUser[0].is_active
-				};
+					isActive: newUser[0].is_active,
+				}
 			} catch (error) {
-				await conn.rollback();
-				console.error('Error in createPatient:', error);
-				throw error;
+				await conn.rollback()
+				console.error("Error in createPatient:", error)
+				throw error
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
@@ -182,24 +240,26 @@ export async function makeDoctorRepository() {
 					identification: rows[0].identification,
 					typeIdentification: rows[0].type_identification,
 					nationality: rows[0].nationality,
-					phone: rows[0].phone
+					phone: rows[0].phone,
 				}
 			} catch (error) {
-				console.error('Error in getPatientByID:', error)
-				throw new Error('Failed to fetch patient')
+				console.error("Error in getPatientByID:", error)
+				throw new Error("Failed to fetch patient")
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
-		async getDoctorsBySpecialtyID(id: number, limit: number, page: number): Promise<{ doctors: DoctorResponse[], total: number }> {
+		async getDoctorsBySpecialtyID(
+			id: number,
+			limit: number,
+			page: number
+		): Promise<{ doctors: DoctorResponse[]; total: number }> {
 			const conn = await pool.getConnection()
 			try {
-				const offset = (page - 1) * limit;
-				const [countResult] = await conn.execute<mysql.RowDataPacket[]>(
-					'SELECT COUNT(*) as total FROM doctors d'
-				);
-				const total = countResult[0].total;
+				const offset = (page - 1) * limit
+				const [countResult] = await conn.execute<mysql.RowDataPacket[]>("SELECT COUNT(*) as total FROM doctors d")
+				const total = countResult[0].total
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
@@ -213,7 +273,7 @@ export async function makeDoctorRepository() {
 					[id, limit, offset]
 				)
 
-				const doctors = (rows as any[]).map(row => ({
+				const doctors = (rows as any[]).map((row) => ({
 					id: row.id,
 					user_id: row.user_id,
 					firstName: row.first_name,
@@ -224,25 +284,25 @@ export async function makeDoctorRepository() {
 					licenseNumber: row.license_number,
 					urlImage: row.url_image,
 					isActive: row.is_active,
-					phone: row.phone
+					phone: row.phone,
 				}))
 
 				return {
-          doctors,
-          total
-        };
+					doctors,
+					total,
+				}
 			} catch (error) {
-				console.error('Error in getDoctorsBySpecialtyID:', error)
-				throw new Error('Failed to fetch doctors by specialty')
+				console.error("Error in getDoctorsBySpecialtyID:", error)
+				throw new Error("Failed to fetch doctors by specialty")
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
 		async getDoctorsByName(name: string): Promise<DoctorResponse[]> {
 			const conn = await pool.getConnection()
 			try {
-				const searchTerm = `%${name}%`;
+				const searchTerm = `%${name}%`
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
                                     s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone
@@ -252,9 +312,9 @@ export async function makeDoctorRepository() {
                          WHERE u.first_name LIKE ? OR u.last_name LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
                          LIMIT 10`,
 					[searchTerm, searchTerm, searchTerm]
-				);
+				)
 
-				return (rows as any[]).map(row => ({
+				return (rows as any[]).map((row) => ({
 					id: row.id,
 					user_id: row.user_id,
 					firstName: row.first_name,
@@ -265,13 +325,13 @@ export async function makeDoctorRepository() {
 					licenseNumber: row.license_number,
 					urlImage: row.url_image,
 					isActive: row.is_active,
-					phone: row.phone
+					phone: row.phone,
 				}))
 			} catch (error) {
-				console.error('Error in getDoctorsByName:', error)
-				throw new Error('Failed to fetch doctors by name')
+				console.error("Error in getDoctorsByName:", error)
+				throw new Error("Failed to fetch doctors by name")
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
@@ -288,57 +348,62 @@ export async function makeDoctorRepository() {
 							d.bio = ?
 					WHERE
 							d.id = ?`,
-					[doctorUpdate.firstName, doctorUpdate.lastName, doctorUpdate.specialityId, doctorUpdate.bio, doctorUpdate.id]
+					[
+						doctorUpdate.firstName,
+						doctorUpdate.lastName,
+						doctorUpdate.specialityId,
+						doctorUpdate.bio,
+						doctorUpdate.id,
+					]
 				)
 
 				if (rows.affectedRows === 0) {
-					throw new Error('Failed to update doctor')
+					throw new Error("Failed to update doctor")
 				}
 
-				return true;
+				return true
 			} catch (error) {
-				console.error('Error in updateDoctor:', error)
+				console.error("Error in updateDoctor:", error)
 				throw error
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 
 		async createDoctorByAdmin(doctorCreate: DoctorCreateByAdmin, hashedPassword: string): Promise<User> {
 			const conn = await pool.getConnection()
-			const role: string = "medico";
+			const role: string = "medico"
 			try {
-				await conn.beginTransaction();
+				await conn.beginTransaction()
 
 				const [result] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
 					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, hashedPassword, role]
-				);
+				)
 
-				const [newUser] = await conn.execute<mysql.RowDataPacket[]>(
-					"SELECT * FROM users WHERE id = ?",
-					[result.insertId]
-				);
+				const [newUser] = await conn.execute<mysql.RowDataPacket[]>("SELECT * FROM users WHERE id = ?", [
+					result.insertId,
+				])
 
 				if (newUser.length === 0) {
-					throw new Error('Failed to create user');
+					throw new Error("Failed to create user")
 				}
 
 				const [rowsSpeciality] = await conn.execute<mysql.RowDataPacket[]>(
 					"SELECT * FROM specialties WHERE id = ?",
 					[doctorCreate.specialtyId]
-				);
+				)
 
 				if (rowsSpeciality.length === 0) {
-					throw new Error('Speciality not found');
+					throw new Error("Speciality not found")
 				}
 
 				const [_] = await conn.execute<mysql.ResultSetHeader>(
 					"INSERT INTO doctors (user_id, specialty_id, license_number, bio) VALUES (?, ?, ?, ?)",
 					[newUser[0].id, doctorCreate.specialtyId, doctorCreate.licenseNumber, doctorCreate.bio]
-				);
+				)
 
-				await conn.commit();
+				await conn.commit()
 				return {
 					id: newUser[0].id,
 					firstName: newUser[0].first_name,
@@ -348,14 +413,14 @@ export async function makeDoctorRepository() {
 					createdAt: new Date(newUser[0].created_at),
 					password: newUser[0].password,
 					role: newUser[0].role,
-					isActive: newUser[0].is_active
-				};
+					isActive: newUser[0].is_active,
+				}
 			} catch (error) {
-				await conn.rollback();
-				console.error('Error in createPatient:', error);
-				throw error;
+				await conn.rollback()
+				console.error("Error in createPatient:", error)
+				throw error
 			} finally {
-				conn.release();
+				conn.release()
 			}
 		},
 	}

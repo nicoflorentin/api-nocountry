@@ -9,3 +9,14 @@ export interface AvailabilityResponse {
 	period_duration: 15 | 30 | 60 // Se pueden acotar los valores posibles según la lógica del negocio
 	created_at: Date // TIMESTAMP en MySQL se mapea a Date en TypeScript
 }
+
+type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+
+export interface AvailabilityUpdatePayload {
+	dayOfWeek?: DayOfWeek
+	startTime?: string
+	endTime?: string
+	restStartTime?: string
+	restEndTime?: string
+	periodTime?: number
+}
