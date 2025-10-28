@@ -1,7 +1,8 @@
 import { Router } from "express"
-import { getAllAvailabilities, testAvailability } from "../controllers/availability"
+import { getAllAvailabilities, getAvailabilitiesByDoctorID, testAvailability } from "../controllers/availability"
 
-export const availabiliyRouter = Router()
+export const availabilityRouter = Router()
 
-availabiliyRouter.get("/test", testAvailability)
-availabiliyRouter.get("/", getAllAvailabilities)
+availabilityRouter.get("/test", testAvailability)
+availabilityRouter.get("/", getAllAvailabilities)
+availabilityRouter.get("/doctor/:id", getAvailabilitiesByDoctorID)

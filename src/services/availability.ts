@@ -11,5 +11,9 @@ export const makeAvailabilityService = async () => {
 
 			return availabilities
 		},
+		async getAvailabilitiesByDoctorID(doctorId: string): Promise<AvailabilityResponse> {
+			const availability = await availabilityRepository.getAvailabilitiesByDoctorID(Number(doctorId))
+			return availability
+		},
 	}
 }

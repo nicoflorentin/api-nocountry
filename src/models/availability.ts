@@ -6,7 +6,6 @@ export interface AvailabilityResponse {
 	end_time: string // TIME en MySQL se mapea a string en formato 'HH:MM:SS'
 	rest_start_time: string // TIME en MySQL se mapea a string en formato 'HH:MM:SS'
 	rest_end_time: string // TIME en MySQL se mapea a string en formato 'HH:MM:SS'
-	period_time: 15 | 30 | 60 // Se pueden acotar los valores posibles según la lógica del negocio
+	period_duration: 15 | 30 | 60 // Se pueden acotar los valores posibles según la lógica del negocio
 	created_at: Date // TIMESTAMP en MySQL se mapea a Date en TypeScript
-	updated_at: Date // TIMESTAMP en MySQL se mapea a Date en TypeScript
 }
