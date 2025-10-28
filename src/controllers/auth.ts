@@ -38,6 +38,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const currentUser = async (req: Request, res: Response) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const user = res.locals.user as CurrentUser;
 
     return res.status(200).json({ user });

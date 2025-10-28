@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import { User } from "../models/user";
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
