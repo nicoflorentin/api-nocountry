@@ -1,6 +1,7 @@
 import mysql, { RowDataPacket, ResultSetHeader } from 'mysql2/promise'; 
 import { getPool } from '../database/db_connection';
-import { AppointmentCreate, AppointmentDetailResponse, AppointmentResponse, AppointmentStatus } from '../models/appointment';
+import { AppointmentCreate, AppointmentDetailResponse, AppointmentResponse, AppointmentStatus, BlockSlotCreate, ConsultationType } from '../models/appointment';
+import { ConsultationDetailCreate, HealthSummaryCreate, MedicalConsultationDetail, HealthSummary } from '../models/medical_history';
 
 // Interfaz que define el contrato de la capa de acceso a datos.
 export interface AppointmentRepository {
@@ -9,16 +10,28 @@ export interface AppointmentRepository {
     updateAppointmentStatus(id: number, status: AppointmentStatus): Promise<boolean>;
     updateAppointment(id: number, data: Partial<AppointmentCreate>): Promise<AppointmentResponse | null>;
     deleteAppointment(id: number): Promise<boolean>;
+    blockSlot(data: BlockSlotCreate): Promise<AppointmentResponse>;
 
     // Métodos complejos (Requerimientos)
     getAllByPatientId(patientId: number, status?: AppointmentStatus, limit?: number, page?: number): Promise<{ appointments: AppointmentDetailResponse[], total: number }>;
     getAllByDoctorId(doctorId: number, status?: AppointmentStatus, limit?: number, page?: number): Promise<{ appointments: AppointmentDetailResponse[], total: number }>;
     getUpcomingAppointment(patientId: number): Promise<AppointmentDetailResponse | null>;
+    getUpcomingAppointmentForDoctor(doctorId: number): Promise<AppointmentDetailResponse | null>;
     getAvailableSlots(doctorId: number, day: string): Promise<AppointmentResponse[]>;
     isSlotBooked(doctorId: number, day: string, startTime: string): Promise<boolean>;
 
     getAppointmentDetailById(id: number): Promise<AppointmentDetailResponse | null>;
     getReservedAppointments(doctorId: number, day: string): Promise<AppointmentResponse[]>;
+    getAppointmentsForDoctorByDay(doctorId: number, day: string): Promise<AppointmentDetailResponse[]>
+
+    /**
+     * @description Inserta los detalles de la consulta, opcionalmente el resumen de salud,
+     * y marca la cita como completada dentro de una transacción.
+     */
+    completeConsultation(
+        consultationData: ConsultationDetailCreate,
+        summaryData?: HealthSummaryCreate | null
+    ): Promise<MedicalConsultationDetail | null>;
 }
 
 // Función de mapeo para la respuesta detallada (JOINs)
@@ -149,7 +162,7 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
                 const [countResult] = await conn.execute<RowDataPacket[]>(`SELECT COUNT(*) as total FROM appointments a ${whereClause}`, values);
                 const total = countResult[0].total;
 
-                // Data Query (ordenado por fecha descendente como se solicitó)
+                // Data Query (ordenado por fecha descendente)
                 const query = `${BASE_SELECT_QUERY} ${whereClause} ORDER BY a.day DESC, a.start_time DESC LIMIT ? OFFSET ?`;
 
                 const [rows] = await conn.execute<RowDataPacket[]>(query, [...values, limit, offset]);
@@ -200,7 +213,7 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
             }
         },
 
-        // ---------------------- PRÓXIMO TURNO (Upcoming Appointment) ----------------------
+        // ---------------------- PRÓXIMO TURNO (Paciente) ----------------------
         async getUpcomingAppointment(patientId: number): Promise<AppointmentDetailResponse | null> {
             const conn = await pool.getConnection();
             try {
@@ -219,6 +232,30 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
             } catch (error) {
                 console.error("Error fetching upcoming appointment:", error);
                 throw error;
+            } finally {
+                conn.release();
+            }
+        },
+
+        // ---------------------- PRÓXIMO TURNO (DOCTOR) ----------------------
+        async getUpcomingAppointmentForDoctor(doctorId: number): Promise<AppointmentDetailResponse | null> {
+            const conn = await pool.getConnection();
+            try {
+                // Similar a getUpcomingAppointment, pero filtra por doctor_id
+                const query = `
+                    ${BASE_SELECT_QUERY}
+                    WHERE a.doctor_id = ? 
+                    AND a.status IN ('confirmado') 
+                    AND CONCAT(a.day, ' ', a.start_time) >= NOW()
+                    ORDER BY a.day ASC, a.start_time ASC
+                    LIMIT 1
+                `;
+                const [rows] = await conn.execute<RowDataPacket[]>(query, [doctorId]);
+
+                return rows.length ? mapRowToAppointmentDetail(rows[0]) : null;
+            } catch (error) {
+                console.error("Error fetching upcoming appointment for doctor:", error);
+                throw error; // Propagar error
             } finally {
                 conn.release();
             }
@@ -305,6 +342,42 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
             }
         },
 
+        // ---------------------- BLOCK SLOT ----------------------
+        async blockSlot(data: BlockSlotCreate): Promise<AppointmentResponse> {
+            const conn = await pool.getConnection();
+            try {
+                // Usaremos status 'confirmado' para que isSlotBooked lo detecte,
+                // pero sin patient_id se interpreta como bloqueo.
+                const status: AppointmentStatus = 'confirmado';
+                // Tipo de consulta podría ser presencial por defecto o uno nuevo 'bloqueo'
+                const consultation_type: ConsultationType = 'presencial';
+
+                const query = `
+                    INSERT INTO appointments 
+                    (availability_id, doctor_id, patient_id, day, start_time, end_time, status, consultation_type) 
+                    VALUES (?, ?, NULL, ?, ?, ?, ?, ?) 
+                `; // patient_id es NULL
+                const values = [
+                    data.availability_id, data.doctor_id, data.day,
+                    data.start_time, data.end_time, status, consultation_type
+                    // Se podría añadir data.reason a un campo 'notes' si existiera
+                ];
+                const [result] = await conn.execute<ResultSetHeader>(query, values);
+
+                const created = await repository.getAppointmentById(result.insertId);
+                if (!created) {
+                    throw new Error('Failed to retrieve created block slot.');
+                }
+                // Nota: Considerar añadir el 'reason' a la respuesta si se guarda en DB
+                return created;
+            } catch (error) {
+                console.error("Error blocking slot:", error);
+                throw error; // Propagar para manejo en capas superiores
+            } finally {
+                conn.release();
+            }
+        },
+
         async getReservedAppointments(doctorId: number, day: string): Promise<AppointmentResponse[]> {
             const conn = await pool.getConnection();
             try {
@@ -325,11 +398,114 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
             }
         },
 
+        // ---------------------- CITAS POR DÍA (DOCTOR) ----------------------
+        async getAppointmentsForDoctorByDay(doctorId: number, day: string): Promise<AppointmentDetailResponse[]> { // <-- Acepta 'day'
+            const conn = await pool.getConnection();
+            try {
+                // Usamos el parámetro 'day' en lugar de CURDATE()
+                const query = `
+                ${BASE_SELECT_QUERY} 
+                WHERE a.doctor_id = ? 
+                AND a.day = ? 
+                AND a.status IN ('confirmado', 'pendiente') 
+                ORDER BY a.start_time ASC 
+            `;
+
+                const [rows] = await conn.execute<RowDataPacket[]>(query, [doctorId, day]); // <-- Pasar 'day'
+
+                return rows.map(mapRowToAppointmentDetail);
+            } catch (error) {
+                console.error("Error fetching appointments for doctor by day:", error);
+                throw error;
+            } finally {
+                conn.release();
+            }
+        },
+
         // Se mantiene la firma del contrato, pero la implementación usa getReservedAppointments
         async getAvailableSlots(doctorId: number, day: string): Promise<AppointmentResponse[]> {
             
             return repository.getReservedAppointments(doctorId, day);
-        }
+        },
+
+        // --- METODO DE COMPLETAR CONSULTA ---
+        async completeConsultation(
+            consultationData: ConsultationDetailCreate,
+            summaryData?: HealthSummaryCreate | null
+        ): Promise<MedicalConsultationDetail | null> {
+            // 1. Obtener una conexión para la transacción
+            const conn = await pool.getConnection();
+            let createdConsultationDetailId: number | null = null;
+
+            try {
+                // 2. Iniciar transacción
+                await conn.beginTransaction();
+
+                // 3. Insertar en medical_consultations_detail
+                const consultQuery = `
+                    INSERT INTO medical_consultations_detail 
+                    (doctor_id, patient_id, appointment_id, reason_for_consultation, description, diagnosis, instructions, notes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+                const consultValues = [
+                    consultationData.doctor_id, consultationData.patient_id, consultationData.appointment_id,
+                    consultationData.reason_for_consultation, consultationData.description, consultationData.diagnosis,
+                    consultationData.instructions, consultationData.notes
+                ];
+                const [consultResult] = await conn.execute<ResultSetHeader>(consultQuery, consultValues);
+                createdConsultationDetailId = consultResult.insertId; // Guardar el ID creado
+
+                // 4. Insertar en health_summaries (si se proporcionaron datos)
+                if (summaryData) {
+                    const summaryQuery = `
+                        INSERT INTO health_summaries 
+                        (patient_id, summary_date, temperature, height, weight, systolic_pressure, diastolic_pressure, blood_type) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    `;
+                    const summaryValues = [
+                        summaryData.patient_id, summaryData.summary_date, summaryData.temperature, summaryData.height,
+                        summaryData.weight, summaryData.systolic_pressure, summaryData.diastolic_pressure, summaryData.blood_type
+                    ];
+                    await conn.execute<ResultSetHeader>(summaryQuery, summaryValues);
+                }
+
+                // 5. Actualizar el estado de la cita a 'completado'
+                const updateAppointmentQuery = "UPDATE appointments SET status = ? WHERE id = ?";
+                const [updateResult] = await conn.execute<ResultSetHeader>(updateAppointmentQuery, ['completado', consultationData.appointment_id]);
+
+                // Verificar si la cita realmente se actualizó (opcional pero recomendado)
+                if (updateResult.affectedRows === 0) {
+                    throw new Error(`Appointment with ID ${consultationData.appointment_id} not found or status already updated.`);
+                }
+
+                // 6. Confirmar transacción
+                await conn.commit();
+
+                // 7. Obtener y devolver el detalle de consulta recién creado (opcional, pero útil)
+                if (createdConsultationDetailId) {
+                    // Necesitamos un método para obtener el detalle por su ID
+                    // Por ahora, devolvemos un objeto básico o null
+                    // TODO: Implementar getConsultationDetailById(id)
+                    const [detailRows] = await conn.execute<MedicalConsultationDetail[]>(
+                        "SELECT * FROM medical_consultations_detail WHERE id = ?",
+                        [createdConsultationDetailId]
+                    );
+                    return detailRows.length > 0 ? detailRows[0] : null;
+                }
+                return null; // Si no se pudo obtener el ID
+
+            } catch (error) {
+                // 8. Si algo falla, deshacer todos los cambios
+                await conn.rollback();
+                console.error("Error completing consultation:", error);
+                // Propagar el error para que el servicio lo maneje (ej. FK no encontrada, etc.)
+                throw error;
+            } finally {
+                // 9. Liberar la conexión siempre
+                conn.release();
+            }
+        },
+
     };
 
     return repository;

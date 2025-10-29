@@ -1,17 +1,20 @@
 import { User, UserCreate } from "../models/user";
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getPool } from '../database/db_connection';
 import { PatientCreate, PatientCreateByAdmin, PatientResponse,PatientUpdate } from "../models/patient";
-import { createPatientByAdmin } from "../controllers/patient";
+import { HealthSummary, MedicalConsultationDetail } from "../models/medical_history"; 
 
 
 export interface PacientRepository {
   getPatientByID(id: number): Promise<PatientResponse | null>;
   getAllPatients(): Promise<PatientResponse[]>;
-  createPatient(patient: PatientCreate): Promise<PatientResponse>;
-  //updatePatient(id: number, patient: Partial<PatientResponse>): Promise<PatientResponse | null>;
+  createPatient(patient: PatientCreate): Promise<PatientResponse | null>;
   updatePatient(id: number, patientUpdate: PatientUpdate): Promise<PatientResponse | null>;
   deletePatient(id: number): Promise<boolean>;
+
+  // --- Firmas para Historial Médico ---
+  getHealthSummariesByPatientId(patientId: number): Promise<HealthSummary[]>;
+  getConsultationDetailsByPatientId(patientId: number): Promise<MedicalConsultationDetail[]>;
 }
 
 export async function makePatientRepository() {
@@ -312,45 +315,50 @@ export async function makePatientRepository() {
       }
     },
 
+    // --- NUEVOS MÉTODOS PARA HISTORIAL MÉDICO ---
+    async getHealthSummariesByPatientId(patientId: number): Promise<HealthSummary[]> {
+      const conn = await pool.getConnection();
+      try {
+        const query = "SELECT * FROM health_summaries WHERE patient_id = ? ORDER BY summary_date DESC";
+        // Usamos <RowDataPacket[]> y luego mapeamos manualmente o hacemos casting
+        const [rows] = await conn.execute<RowDataPacket[]>(query, [patientId]);
+        // Casting simple si las columnas coinciden exactamente con HealthSummary
+        return rows as HealthSummary[];
+      } catch (error) {
+        console.error("Error fetching health summaries:", error);
+        throw error;
+      } finally {
+        conn.release();
+      }
+    },
 
+    async getConsultationDetailsByPatientId(patientId: number): Promise<MedicalConsultationDetail[]> {
+      const conn = await pool.getConnection();
+      try {
+        const query = `
+                    SELECT 
+                        mcd.*, 
+                        a.day as appointment_day, 
+                        a.start_time as appointment_start_time,
+                        du.first_name as doctor_first_name,
+                        du.last_name as doctor_last_name
+                    FROM medical_consultations_detail mcd
+                    JOIN appointments a ON mcd.appointment_id = a.id
+                    JOIN doctors d ON mcd.doctor_id = d.id
+                    JOIN users du ON d.user_id = du.id 
+                    WHERE mcd.patient_id = ? 
+                    ORDER BY mcd.created_at DESC 
+                 `;
+        const [rows] = await conn.execute<RowDataPacket[]>(query, [patientId]);
+        // Casting simple si las columnas (incluyendo alias) coinciden con MedicalConsultationDetail
+        return rows as MedicalConsultationDetail[];
+      } catch (error) {
+        console.error("Error fetching consultation details:", error);
+        throw error;
+      } finally {
+        conn.release();
+      }
+    },
 
-    // async updateUser(id: number, user: Partial<User>): Promise<User | null> {
-    //   try {
-    //     const fields = Object.keys(user).map(key => `${key} = ?`).join(', ');
-    //     const values = [...Object.values(user), id];
-
-    //     const [result] = await connection.execute<mysql.ResultSetHeader>(
-    //       `UPDATE users SET ${fields} WHERE id = ?`,
-    //       values
-    //     );
-
-    //     if (result.affectedRows === 0) {
-    //       return null;
-    //     }
-
-    //     const [updatedUser] = await connection.execute<mysql.RowDataPacket[]>(
-    //       "SELECT * FROM users WHERE id = ?",
-    //       [id]
-    //     );
-
-    //     return updatedUser[0] as User;
-    //   } catch (error) {
-    //     console.error('Error in updateUser:', error);
-    //     throw new Error('Failed to update user');
-    //   }
-    // },
-
-    // async deleteUser(id: number): Promise<boolean> {
-    //   try {
-    //     const [result] = await connection.execute<mysql.ResultSetHeader>(
-    //       "DELETE FROM users WHERE id = ?",
-    //       [id]
-    //     );
-    //     return result.affectedRows > 0;
-    //   } catch (error) {
-    //     console.error('Error in deleteUser:', error);
-    //     throw new Error('Failed to delete user');
-    //   }
-    // }
   };
 }

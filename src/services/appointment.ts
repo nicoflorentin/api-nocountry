@@ -1,8 +1,9 @@
-import { AppointmentCreate, AppointmentDetailResponse, AppointmentResponse, AppointmentStatus, TimeSlot } from "../models/appointment";
+import { AppointmentCreate, AppointmentDetailResponse, AppointmentResponse, AppointmentStatus, TimeSlot, BlockSlotCreate } from "../models/appointment";
 import { makeAppointmentRepository, AppointmentRepository } from "../repositories/appointment";
 import { makeDoctorRepository, DoctorRepository } from "../repositories/doctor";
-import { makePatientRepository } from "../repositories/patient"; // Quitar PacientRepository si no se usa aquí
+import { makePatientRepository } from "../repositories/patient";
 import { AvailabilityRepository, makeAvailabilityRepository } from "../repositories/availability";
+import { CompleteConsultationPayload, ConsultationDetailCreate, HealthSummaryCreate, MedicalConsultationDetail } from "../models/medical_history";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -37,14 +38,19 @@ export interface AppointmentService {
     getAllByPatientId(patientId: string, status?: AppointmentStatus, limit?: number, page?: number): Promise<{ appointments: AppointmentDetailResponse[], total: number }>;
     getAllByDoctorId(doctorId: string, status?: AppointmentStatus, limit?: number, page?: number): Promise<{ appointments: AppointmentDetailResponse[], total: number }>;
     getUpcomingAppointment(patientId: string): Promise<AppointmentDetailResponse | null>;
+    getUpcomingAppointmentForDoctor(doctorId: string): Promise<AppointmentDetailResponse | null>;
 
     // Acciones y Actualizaciones
     updateAppointment(id: string, data: Partial<AppointmentCreate>): Promise<AppointmentResponse>;
     updateAppointmentStatus(id: string, status: AppointmentStatus): Promise<boolean>;
     deleteAppointment(id: string): Promise<boolean>;
+    blockSlot(data: BlockSlotCreate): Promise<AppointmentResponse>;
 
     // Lógica avanzada
-    generateAvailableSlots(doctorId: string, day: string): Promise<TimeSlot[]>; // <-- Implementaremos esto
+    generateAvailableSlots(doctorId: string, day: string): Promise<TimeSlot[]>;
+    getAppointmentsForDoctorByDay(doctorId: string, day: string): Promise<AppointmentDetailResponse[]>;
+
+    completeConsultationService(payload: CompleteConsultationPayload): Promise<MedicalConsultationDetail | null>;
 }
 
 export const makeAppointmentService = async (): Promise<AppointmentService> => {
@@ -118,6 +124,11 @@ export const makeAppointmentService = async (): Promise<AppointmentService> => {
             await verifyPatientExists(Number(patientId));
             return await appointmentRepository.getUpcomingAppointment(Number(patientId));
         },
+        async getUpcomingAppointmentForDoctor(doctorId: string): Promise<AppointmentDetailResponse | null> {
+            await verifyDoctorExists(Number(doctorId));
+            return await appointmentRepository.getUpcomingAppointmentForDoctor(Number(doctorId));
+        },
+
         async updateAppointment(id: string, data: Partial<AppointmentCreate>): Promise<AppointmentResponse> {
             if (data.doctor_id) await verifyDoctorExists(data.doctor_id);
             if (data.patient_id) await verifyPatientExists(data.patient_id);
@@ -175,7 +186,7 @@ export const makeAppointmentService = async (): Promise<AppointmentService> => {
             }
 
             const reservedAppointments = await appointmentRepository.getReservedAppointments(id, day);
-            const reservedStartTimes = new Set(reservedAppointments.map(app => app.start_time));     
+            const reservedStartTimes = new Set(reservedAppointments.map(app => app.start_time));
             const potentialSlots: TimeSlot[] = [];
             const startMins = timeToMinutes(availabilityRule.start_time);
             const endMins = timeToMinutes(availabilityRule.end_time);
@@ -202,7 +213,7 @@ export const makeAppointmentService = async (): Promise<AppointmentService> => {
                         end: slotEndTimeStr,
                     });
                 } else {
-                
+
                 }
 
                 if (currentSlotEnd <= restStartMins) {
@@ -216,6 +227,85 @@ export const makeAppointmentService = async (): Promise<AppointmentService> => {
 
             return potentialSlots;
         },
+        // ---------------------- BLOCK SLOT ----------------------
+        async blockSlot(data: BlockSlotCreate): Promise<AppointmentResponse> {
+            // Validar existencia de Doctor y Availability
+            await verifyDoctorExists(data.doctor_id);
+            // await verifySlotIntegrity(data); // Requeriría adaptar verifySlotIntegrity o crear una versión para BlockSlotCreate
+
+            // Lógica de Negocio: Verificar si el slot ya está ocupado (por cita o bloqueo)
+            const isBooked = await appointmentRepository.isSlotBooked(
+                data.doctor_id,
+                data.day,
+                data.start_time
+            );
+            if (isBooked) {
+                throw new Error("SLOT_ALREADY_BOOKED");
+            }
+
+            // Crear el bloqueo
+            return await appointmentRepository.blockSlot(data);
+        },
+
+        // ---------------------- CITAS POR DÍA (DOCTOR) ----------------------
+        async getAppointmentsForDoctorByDay(doctorId: string, day: string): Promise<AppointmentDetailResponse[]> { // <-- Acepta 'day'
+            // 1. Verificar que el doctor existe
+            await verifyDoctorExists(Number(doctorId));
+
+            // 2. (Opcional) Validar formato de fecha 'day' aquí si no se hace en el controller
+            if (!dayjs(day, 'YYYY-MM-DD', true).isValid()) {
+                throw new Error("Invalid date format provided. Use YYYY-MM-DD.");
+            }
+
+            // 3. Llamar al nuevo método del repositorio
+            return await appointmentRepository.getAppointmentsForDoctorByDay(Number(doctorId), day);
+        },
+
+        // ---------------------- COMPLETAR CONSULTA ----------------------
+        /**
+         * @description Procesa la finalización de una consulta: guarda detalles,
+         * opcionalmente resumen de salud, y actualiza el estado de la cita.
+         * @param payload Objeto que contiene los datos de consulta y resumen.
+         * @returns Una promesa que resuelve al detalle de consulta creado o null.
+         * @throws Error si la cita no existe, no está confirmada, o falla la transacción.
+         */
+        async completeConsultationService(payload: CompleteConsultationPayload): Promise<MedicalConsultationDetail | null> {
+            const { consultation, summary } = payload;
+            const appointmentId = consultation.appointment_id;
+
+            // 1. Validaciones de Negocio Previas
+            // a) Verificar que la cita exista y esté en estado 'confirmado' (o el estado previo permitido)
+            const appointment = await appointmentRepository.getAppointmentById(appointmentId);
+            if (!appointment) {
+                throw new Error(`Appointment with ID ${appointmentId} not found.`);
+            }
+            if (appointment.status !== 'confirmado') {
+                throw new Error(`Appointment with ID ${appointmentId} cannot be completed because its status is '${appointment.status}'.`);
+            }
+            // b) Verificar que doctor_id y patient_id coincidan con la cita original (opcional pero seguro)
+            if (appointment.doctor_id !== consultation.doctor_id || appointment.patient_id !== consultation.patient_id) {
+                console.warn(`Mismatch in IDs for appointment ${appointmentId}: Request(Dr:${consultation.doctor_id}, Pt:${consultation.patient_id}) vs DB(Dr:${appointment.doctor_id}, Pt:${appointment.patient_id})`);
+                throw new Error("Doctor or Patient ID in consultation data does not match the appointment.");
+            }
+            // c) Si se incluye summary, asegurar que la fecha sea la misma que la cita (o coherente)
+            if (summary && summary.summary_date !== appointment.day) {
+                //console.warn(`Summary date ${summary.summary_date} differs from appointment day ${appointment.day}`);
+                //summary.summary_date = appointment.day; 
+            }
+            // d) Asegurar que patient_id en summary (si existe) coincida con consultation
+            if (summary && summary.patient_id !== consultation.patient_id) {
+                throw new Error("Patient ID mismatch between consultation and health summary data.");
+            }
+
+
+            // 2. Llamar al método del repositorio que ejecuta la transacción
+            //    El repositorio se encarga de insertar detalles, resumen (si existe) y actualizar cita.
+            const createdDetail = await appointmentRepository.completeConsultation(consultation, summary);
+
+            // 3. Devolver el resultado (el detalle de consulta creado)
+            return createdDetail;
+        },
+
     });
 
     return service;
@@ -223,6 +313,6 @@ export const makeAppointmentService = async (): Promise<AppointmentService> => {
 
 // Ensure PatientRepository interface includes getPatientByID if used elsewhere
 import { PatientResponse } from '../models/patient';
-export interface PacientRepository { 
+export interface PacientRepository {
     getPatientByID(id: number): Promise<PatientResponse | null>;
 }

@@ -6,7 +6,7 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
 
 // Definiciones base para ENUMs
-const statusEnum = z.enum(["confirmado", "cancelado", "completado"], {
+const statusEnum = z.enum(["confirmado", "cancelado", "completado", "ausente"], {
     message: "Estado de cita inválido."
 });
 
@@ -47,4 +47,21 @@ export const AppointmentFilterSchema = z.object({
     status: statusEnum.optional(),
     page: z.string().optional().transform((val) => (val ? parseInt(val) : 1)).pipe(z.number().int().min(1)),
     limit: z.string().optional().transform((val) => (val ? parseInt(val) : 10)).pipe(z.number().int().min(1)),
+});
+
+export const BlockSlotCreateSchema = z.object({
+    availability_id: z.number().int().positive(),
+    doctor_id: z.number().int().positive(),
+    day: z.string().regex(dateRegex, { message: "Fecha inválida (YYYY-MM-DD)." }),
+    start_time: z.string().regex(timeRegex, { message: "Hora de inicio inválida (HH:MM:SS)." }),
+    end_time: z.string().regex(timeRegex, { message: "Hora de fin inválida (HH:MM:SS)." }),
+    reason: z.string().optional(), // Motivo opcional
+}).superRefine((data, ctx) => {
+    if (data.start_time >= data.end_time) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["end_time"],
+            message: "La hora de fin debe ser posterior a la hora de inicio de la cita.",
+        });
+    }
 });

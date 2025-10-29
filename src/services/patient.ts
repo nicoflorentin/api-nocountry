@@ -6,11 +6,26 @@ import { sendEmailCreateUser } from "../utils/email";
 import { genericPassword } from "../utils/generic_pass";
 import { hashPassword } from "../utils/hash_password";
 import { PatientUpdate } from "../models/patient";
+import { MedicalHistoryResponse, HealthSummary, MedicalConsultationDetail } from "../models/medical_history";
+
+export interface PatientService {
+  createPatient(createPatient: PatientCreate): Promise<UserResponse | null>;
+  getAllPatients(limit: number, page: number): Promise<{ patients: PatientResponse[], total: number }>;
+  getPatientByID(id: string): Promise<PatientResponse>; 
+  getPatientsByName(name: string): Promise<PatientResponse[]>;
+  createPatientByAdmin(createPatient: PatientCreateByAdmin): Promise<UserResponse | null>;
+  updatePatient(id: string, patientUpdate: PatientUpdate): Promise<PatientResponse | null>; 
+  // deletePatient(id: string): Promise<boolean>; 
+  getMedicalHistory(patientId: string): Promise<MedicalHistoryResponse>;
+}
 
 export async function makePatientService() {
   const patientRepository = await makePatientRepository();
 
-  return {
+  const service: PatientService = {} as PatientService; // Inicialización vacía, se llena con Object.assign
+
+  // Implementación de la lógica del servicio
+  Object.assign(service, {
     async createPatient(createPatient: PatientCreate): Promise<UserResponse | null> {
       createPatient.password = await hashPassword(createPatient.password);
 
@@ -82,5 +97,27 @@ export async function makePatientService() {
 
       return updatedPatient;
     },
-  };
+
+    async getMedicalHistory(patientId: string): Promise<MedicalHistoryResponse> {
+      const id = Number(patientId);
+
+      // Verificar que el paciente existe. Reutilizamos getPatientByID.
+      await this.getPatientByID(patientId);
+
+      // Obtener ambos tipos de historial concurrentemente usando Promise.all.
+      const [healthSummaries, consultationDetails] = await Promise.all([
+        patientRepository.getHealthSummariesByPatientId(id),
+        patientRepository.getConsultationDetailsByPatientId(id)
+      ]);
+
+      //Construir y devolver el objeto de respuesta combinado.
+      return {
+        patientId: id,
+        healthSummaries, // Array de HealthSummary
+        consultationDetails, // Array de MedicalConsultationDetail
+      };
+    },
+  }); 
+
+  return service;
 }
