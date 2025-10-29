@@ -7,13 +7,13 @@ import { sendEmailCreateUser } from "../utils/email"
 dotenv.config()
 
 const initialConfig = {
-	host: process.env.DB_HOST || "localhost",
-	user: process.env.DB_USER || "root",
-	password: process.env.DB_PASSWORD || "",
-	waitForConnections: true,
-	connectionLimit: 10,
-	queueLimit: 0,
-	port: parseInt(process.env.DB_PORT || "3306"),
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  port: parseInt(process.env.DB_PORT || "3306"),
 }
 
 const DB_NAME = process.env.DB_NAME || "nocountry"
@@ -26,91 +26,91 @@ const ADMIN_IS_ACTIVE = process.env.ADMIN_IS_ACTIVE === "true" // Convertir a bo
 const ADMIN_ROLE = process.env.ADMIN_ROLE
 
 async function createDefaultAdmin(pool: mysql.Pool) {
-	if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !ADMIN_ROLE) {
-		console.warn(
-			"⚠️ Advertencia: Variables de entorno de administrador incompletas. Se omitirá la creación del admin por defecto."
-		)
-		return
-	}
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !ADMIN_ROLE) {
+    console.warn(
+      "⚠️ Advertencia: Variables de entorno de administrador incompletas. Se omitirá la creación del admin por defecto."
+    )
+    return
+  }
 
-	try {
-		const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM users WHERE email = ?", [ADMIN_EMAIL])
+  try {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM users WHERE email = ?", [ADMIN_EMAIL])
 
-		if (rows.length === 0) {
-			const hashedPassword = await hashPassword(ADMIN_PASSWORD)
+    if (rows.length === 0) {
+      const hashedPassword = await hashPassword(ADMIN_PASSWORD)
       // const password = genericPassword();
-			// const hashedPassword = await hashPassword(password)
+      // const hashedPassword = await hashPassword(password)
 
-			const insertQuery = `
+      const insertQuery = `
         INSERT INTO users 
         (first_name, last_name, phone, email, password, is_active, role) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `
-			const values = [
-				ADMIN_FIRST_NAME,
-				ADMIN_LAST_NAME,
-				ADMIN_PHONE,
-				ADMIN_EMAIL,
-				hashedPassword,
-				ADMIN_IS_ACTIVE,
-				ADMIN_ROLE,
-			]
+      const values = [
+        ADMIN_FIRST_NAME,
+        ADMIN_LAST_NAME,
+        ADMIN_PHONE,
+        ADMIN_EMAIL,
+        hashedPassword,
+        ADMIN_IS_ACTIVE,
+        ADMIN_ROLE,
+      ]
 
-			await pool.query(insertQuery, values)
+      await pool.query(insertQuery, values)
 
       // const name = `${ADMIN_FIRST_NAME} ${ADMIN_LAST_NAME}`
       // const email = ADMIN_EMAIL
 
       // await sendEmailCreateUser(name, email, password)
-			console.log("✅ Usuario administrador por defecto creado exitosamente.")
-		} else {
-			console.log("ℹ️ El usuario administrador por defecto ya existe. No se creó.")
-		}
-	} catch (error) {
-		console.error("❌ Error al crear el usuario administrador por defecto:", error)
-	}
+      console.log("✅ Usuario administrador por defecto creado exitosamente.")
+    } else {
+      console.log("ℹ️ El usuario administrador por defecto ya existe. No se creó.")
+    }
+  } catch (error) {
+    console.error("❌ Error al crear el usuario administrador por defecto:", error)
+  }
 }
 
 async function createSpecialities(pool: mysql.Pool) {
-	try {
-		const specialities = [
-			{ name: "cardiología", description: "Especialidad de cardiología" },
-			{ name: "pediatría", description: "Especialidad de pediatría" },
-			{ name: "neurología", description: "Especialidad de neurología" },
-			{ name: "oncología", description: "Especialidad de oncología" },
-			{ name: "ginecología", description: "Especialidad de ginecología" },
-		]
+  try {
+    const specialities = [
+      { name: "cardiología", description: "Especialidad de cardiología" },
+      { name: "pediatría", description: "Especialidad de pediatría" },
+      { name: "neurología", description: "Especialidad de neurología" },
+      { name: "oncología", description: "Especialidad de oncología" },
+      { name: "ginecología", description: "Especialidad de ginecología" },
+    ]
 
-		for (const speciality of specialities) {
-			const { name, description } = speciality
-			const insertQuery = `
+    for (const speciality of specialities) {
+      const { name, description } = speciality
+      const insertQuery = `
       INSERT IGNORE INTO specialties (name, description)
       VALUES (?, ?)
       `
-			const values = [name, description]
-			await pool.query(insertQuery, values)
-		}
-	} catch (error) {
-		console.error("❌ Error al crear las especialidades:", error)
-	}
+      const values = [name, description]
+      await pool.query(insertQuery, values)
+    }
+  } catch (error) {
+    console.error("❌ Error al crear las especialidades:", error)
+  }
 }
 
 async function initializeDatabase() {
-	try {
-		const initialPool = mysql.createPool(initialConfig)
+  try {
+    const initialPool = mysql.createPool(initialConfig)
 
-		await initialPool.query(`CREATE DATABASE IF NOT EXISTS ${DB_NAME}`)
-		console.log(`Database ${DB_NAME} checked/created successfully`)
+    await initialPool.query(`CREATE DATABASE IF NOT EXISTS ${DB_NAME}`)
+    console.log(`Database ${DB_NAME} checked/created successfully`)
 
-		await initialPool.end()
+    await initialPool.end()
 
-		const pool = mysql.createPool({
-			...initialConfig,
-			database: DB_NAME,
-		})
+    const pool = mysql.createPool({
+      ...initialConfig,
+      database: DB_NAME,
+    })
 
-		const tables = {
-			users: `
+    const tables = {
+      users: `
         CREATE TABLE IF NOT EXISTS users (
           id INT PRIMARY KEY AUTO_INCREMENT,
           first_name VARCHAR(255) NOT NULL,
@@ -126,7 +126,7 @@ async function initializeDatabase() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `,
-			specialties: `
+      specialties: `
         CREATE TABLE IF NOT EXISTS specialties (
           id INT PRIMARY KEY AUTO_INCREMENT,
           name VARCHAR(255) NOT NULL UNIQUE,
@@ -134,7 +134,7 @@ async function initializeDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )`,
-			doctors: `
+      doctors: `
             CREATE TABLE IF NOT EXISTS doctors (
               id INT PRIMARY KEY AUTO_INCREMENT,
               user_id INT NOT NULL,
@@ -147,7 +147,7 @@ async function initializeDatabase() {
               FOREIGN KEY (specialty_id) REFERENCES specialties(id)
             )
           `,
-			patients: `
+      patients: `
         CREATE TABLE IF NOT EXISTS patients (
           id INT PRIMARY KEY AUTO_INCREMENT,
           user_id INT NOT NULL,
@@ -162,7 +162,7 @@ async function initializeDatabase() {
           UNIQUE (type_identification, identification)
           )
           `,
-			health_summaries: `
+      health_summaries: `
         CREATE TABLE IF NOT EXISTS health_summaries (
           id INT PRIMARY KEY AUTO_INCREMENT,
           patient_id INT NOT NULL,
@@ -177,7 +177,7 @@ async function initializeDatabase() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           FOREIGN KEY (patient_id) REFERENCES patients(id)
       )`,
-			doctor_patients: `
+      doctor_patients: `
         CREATE TABLE IF NOT EXISTS doctor_patients (
           id INT PRIMARY KEY AUTO_INCREMENT,
           doctor_id INT NOT NULL,
@@ -190,7 +190,7 @@ async function initializeDatabase() {
           UNIQUE (doctor_id, patient_id)
         )
       `,
-			availabilities: `
+      availabilities: `
         CREATE TABLE IF NOT EXISTS availabilities (
           id INT PRIMARY KEY AUTO_INCREMENT,
           doctor_id INT NOT NULL,
@@ -205,7 +205,7 @@ async function initializeDatabase() {
           FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
         )
       `,
-			appointments: `
+      appointments: `
         CREATE TABLE IF NOT EXISTS appointments (
           id INT PRIMARY KEY AUTO_INCREMENT,
           availability_id INT NOT NULL,
@@ -214,7 +214,7 @@ async function initializeDatabase() {
           day DATE NOT NULL,
           start_time TIME NOT NULL,
           end_time TIME NOT NULL,
-          status ENUM('confirmado','cancelado','completado') DEFAULT 'confirmado',
+          status ENUM('confirmado','cancelado','completado','ausente') DEFAULT 'confirmado',
           consultation_type ENUM('virtual','presencial') NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -223,7 +223,7 @@ async function initializeDatabase() {
           FOREIGN KEY (availability_id) REFERENCES availabilities(id)
         )
       `,
-			medical_consultations_detail: `
+      medical_consultations_detail: `
         CREATE TABLE IF NOT EXISTS medical_consultations_detail (
           id INT PRIMARY KEY AUTO_INCREMENT,
           doctor_id INT NOT NULL,
@@ -241,7 +241,7 @@ async function initializeDatabase() {
           FOREIGN KEY (appointment_id) REFERENCES appointments(id)
         )
       `,
-			attached_documentation: `
+      attached_documentation: `
         CREATE TABLE IF NOT EXISTS attached_documentation (
           id INT PRIMARY KEY AUTO_INCREMENT,
           doctor_id INT NOT NULL,
@@ -254,62 +254,62 @@ async function initializeDatabase() {
           FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
           FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE
         )`,
-		}
+    }
 
-		for (const [tableName, query] of Object.entries(tables)) {
-			await pool.query(query)
-			console.log(`Table ${tableName} checked/created successfully`)
-		}
+    for (const [tableName, query] of Object.entries(tables)) {
+      await pool.query(query)
+      console.log(`Table ${tableName} checked/created successfully`)
+    }
 
-		await createDefaultAdmin(pool)
+    await createDefaultAdmin(pool)
 
-		await createSpecialities(pool)
+    await createSpecialities(pool)
 
-		return pool
-	} catch (error) {
-		console.error("Error initializing database:", error)
-		throw error
-	}
+    return pool
+  } catch (error) {
+    console.error("Error initializing database:", error)
+    throw error
+  }
 }
 
 let pool: mysql.Pool
 let initializingPromise: Promise<mysql.Pool> | null = null
 
 export const getPool = async () => {
-	if (pool) {
-		return pool
-	}
+  if (pool) {
+    return pool
+  }
 
-	// Si hay una inicialización en curso, esperamos a que termine.
-	if (initializingPromise) {
-		return initializingPromise
-	}
+  // Si hay una inicialización en curso, esperamos a que termine.
+  if (initializingPromise) {
+    return initializingPromise
+  }
 
-	// No hay pool ni inicialización, creamos la promesa.
-	console.log("⚙️ Iniciando la configuración de la base de datos...")
-	initializingPromise = initializeDatabase()
+  // No hay pool ni inicialización, creamos la promesa.
+  console.log("⚙️ Iniciando la configuración de la base de datos...")
+  initializingPromise = initializeDatabase()
 
-	try {
-		// Espera a que termine la inicialización y asigna el pool.
-		pool = await initializingPromise
-		return pool
-	} catch (error) {
-		// Si falla la inicialización, limpia el candado y re-lanza el error.
-		initializingPromise = null
-		throw error
-	}
+  try {
+    // Espera a que termine la inicialización y asigna el pool.
+    pool = await initializingPromise
+    return pool
+  } catch (error) {
+    // Si falla la inicialización, limpia el candado y re-lanza el error.
+    initializingPromise = null
+    throw error
+  }
 }
 
 export const initDB = getPool // Usar getPool como función de inicialización principal
 
 export const testConnection = async () => {
-	try {
-		const connection = await (await getPool()).getConnection()
-		console.log("Database connection successful")
-		connection.release()
-		return true
-	} catch (error) {
-		console.error("Error connecting to the database:", error)
-		return false
-	}
+  try {
+    const connection = await (await getPool()).getConnection()
+    console.log("Database connection successful")
+    connection.release()
+    return true
+  } catch (error) {
+    console.error("Error connecting to the database:", error)
+    return false
+  }
 }

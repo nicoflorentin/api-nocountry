@@ -3,7 +3,7 @@
 /**
  * @description Estados posibles de una cita médica, reflejando el ENUM en la DB.
  */
-export type AppointmentStatus = 'confirmado' | 'cancelado' | 'completado';
+export type AppointmentStatus = 'confirmado' | 'cancelado' | 'completado' | 'ausente'; 
 
 /**
  * @description Tipo de consulta, reflejando el ENUM en la DB.
@@ -58,4 +58,16 @@ export interface AppointmentDetailResponse extends AppointmentResponse {
 export interface TimeSlot {
     start: string; // HH:MM:SS
     end: string;   // HH:MM:SS
+}
+
+/**
+ * @description Datos necesarios para bloquear un slot de tiempo específico.
+ */
+export interface BlockSlotCreate {
+    availability_id: number; // Referencia a la regla de disponibilidad
+    doctor_id: number;
+    day: string;          // YYYY-MM-DD
+    start_time: string;   // HH:MM:SS
+    end_time: string;     // HH:MM:SS
+    reason?: string;      // Opcional: Motivo del bloqueo
 }

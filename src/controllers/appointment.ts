@@ -2,6 +2,12 @@ import { Request, Response } from "express";
 import { makeAppointmentService } from "../services/appointment";
 import { AppointmentCreateSchema, AppointmentFilterSchema, AppointmentStatusUpdateSchema, AppointmentUpdateSchema } from "../validations/appointment";
 import { AppointmentCreate, AppointmentStatus } from "../models/appointment";
+import { BlockSlotCreateSchema } from "../validations/appointment"; 
+import { BlockSlotCreate } from "../models/appointment";
+import { CompleteConsultationPayloadSchema } from "../validations/medical_history"; 
+import { CompleteConsultationPayload } from "../models/medical_history";
+import { UserResponse } from "../models/user";
+import { CurrentUser } from "../models/auth"; 
 
 // Variable para almacenar la instancia del servicio
 let appointmentService: Awaited<ReturnType<typeof makeAppointmentService>>;
@@ -98,6 +104,25 @@ export const getUpcomingAppointment = async (req: Request, res: Response) => {
         const { patientId } = req.params; // Obtener el ID del paciente de la URL
         // Llamar al servicio para obtener la próxima cita
         const appointment = await getService().getUpcomingAppointment(patientId);
+
+        if (!appointment) {
+            // Si no hay citas próximas, devolver 404
+            return res.status(404).json({ error: "No hay citas próximas programadas." });
+        }
+        // Devolver 200 OK con la cita encontrada
+        return res.status(200).json(appointment);
+    } catch (error) {
+        // Usar el manejador centralizado
+        return handleServiceError(res, error);
+    }
+};
+
+// ---------------------- GET UPCOMING (DOCTOR) ----------------------
+export const getUpcomingAppointmentForDoctor = async (req: Request, res: Response) => {
+    try {
+        const { doctorId } = req.params; // Obtener el ID del doctor de la URL
+        // Llamar al servicio para obtener la próxima cita del doctor
+        const appointment = await getService().getUpcomingAppointmentForDoctor(doctorId);
 
         if (!appointment) {
             // Si no hay citas próximas, devolver 404
@@ -210,6 +235,7 @@ const updateStatusAction = (status: AppointmentStatus) => {
 export const cancelAppointment = updateStatusAction('cancelado');
 export const completeAppointment = updateStatusAction('completado');
 export const confirmAppointment = updateStatusAction('confirmado');
+export const markAppointmentAsNoShow = updateStatusAction('ausente');
 
 // ---------------------- DELETE ----------------------
 export const deleteAppointment = async (req: Request, res: Response) => {
@@ -224,3 +250,97 @@ export const deleteAppointment = async (req: Request, res: Response) => {
     }
 };
 
+// ---------------------- BLOCK SLOT ----------------------
+export const blockSlotController = async (req: Request, res: Response) => {
+    const result = BlockSlotCreateSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ errors: result.error.issues });
+    }
+    try {
+        // Lógica de Autorización: ¿Quién puede bloquear? (Médico sí mismo o Admin)
+        const currentUser = res.locals.user; // Asumiendo middleware de auth
+        const data: BlockSlotCreate = result.data as BlockSlotCreate;
+
+        if (currentUser.role !== 'admin' && currentUser.id !== data.doctor_id) {
+            // Si no es admin y no es el mismo doctor intentando bloquear su propio slot
+            return res.status(403).json({ error: "Acceso denegado. Solo puedes bloquear tu propia disponibilidad o ser administrador." });
+        }
+
+        const blockedSlot = await getService().blockSlot(data);
+        return res.status(201).json(blockedSlot); // 201 Created
+    } catch (error) {
+        // Reutilizar handleServiceError para 409 (SLOT_ALREADY_BOOKED) y 404 (Doctor/Availability not found)
+        return handleServiceError(res, error);
+    }
+};
+
+// ---------------------- GET APPOINTMENTS FOR DOCTOR BY DAY ----------------------
+export const getAppointmentsForDoctorByDayController = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params; // doctorId
+        const { day } = req.query; // Obtener fecha del query param
+
+        // Validar que 'day' se proporcionó y tiene formato YYYY-MM-DD
+        if (!day || typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+            return res.status(400).json({ error: "Parámetro 'day' es requerido y debe estar en formato YYYY-MM-DD." });
+        }
+
+        const appointments = await getService().getAppointmentsForDoctorByDay(id, day);
+
+        // Devolver array vacío si no hay citas, no es error.
+        return res.status(200).json(appointments);
+    } catch (error) {
+        return handleServiceError(res, error);
+    }
+};
+
+// --- NUEVO CONTROLADOR PARA COMPLETAR CONSULTA ---
+/**
+ * @description Maneja la solicitud POST para registrar los detalles de una consulta completada,
+ * opcionalmente un resumen de salud, y marcar la cita como 'completada'.
+ */
+export const completeConsultationController = async (req: Request, res: Response) => {
+    // 1. Validar el payload completo usando el esquema Zod
+    const result = CompleteConsultationPayloadSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ errors: result.error.format() });
+    }
+
+    try {
+        // 2. Lógica de Autorización: ¿Quién puede completar una consulta?
+        //    Normalmente, solo el doctor asignado a la cita o un administrador.
+        const currentUser = res.locals.user as CurrentUser;
+        if (!currentUser) {
+            return res.status(401).json({ error: "No autenticado." });
+        }
+
+        const payload: CompleteConsultationPayload = result.data;
+        const consultationData = payload.consultation;
+
+        // Verificar si el usuario logueado es el doctor de la consulta o un admin
+        let authorized = false;
+        if (currentUser.role === 'admin') {
+            authorized = true;
+        } else if (currentUser.role === 'medico') {
+            // pendiente: obtener el doctor_id del currentUser.id
+            // Simplificación temporal: Asumir que el payload incluye el doctor_id correcto y confiamos en el front-end
+            console.warn("Autorización para completar consulta necesita verificación de doctor_id vs currentUser.")
+            authorized = true; // Placeholder 
+
+        }
+
+        if (!authorized) {
+            return res.status(403).json({ error: "Acceso denegado. Solo el doctor asignado o un administrador pueden completar esta consulta." });
+        }
+
+        // 3. Llamar al servicio para procesar la finalización de la consulta
+        const createdConsultationDetail = await getService().completeConsultationService(payload);
+
+        // 4. Enviar respuesta exitosa (201 Created o 200 OK)
+        return res.status(201).json(createdConsultationDetail);
+
+    } catch (error) {
+        // 5. Manejar errores (404 Cita no encontrada, 409 Estado incorrecto, etc.)
+        return handleServiceError(res, error);
+    }
+};
