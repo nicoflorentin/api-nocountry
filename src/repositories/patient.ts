@@ -242,8 +242,9 @@ export async function makePatientRepository() {
       const patientFields: Record<string, any> = {};
 
       // Mapeo de camelCase a snake_case para SQL
-      const userKeys = ['firstName', 'lastName', 'email', 'phone', 'urlImage', 'isActive'];
-      const patientKeys = ['dateOfBirth', 'gender', 'identification', 'typeIdentification', 'nationality'];
+      const userKeys = ['firstName', 'lastName', 'phone'];
+      // const patientKeys = ['dateOfBirth', 'gender', 'identification', 'typeIdentification', 'nationality'];
+      const patientKeys = ['dateOfBirth', 'gender', 'nationality'];
 
       for (const [key, value] of Object.entries(patientUpdate)) {
         if (value === undefined) continue; 

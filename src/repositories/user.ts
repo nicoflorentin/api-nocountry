@@ -82,6 +82,20 @@ export async function makeUserRepository() {
         console.error('Error in updateUserImage:', error);
         throw new Error('Failed to update user image');
       }
-    }
+    },
+
+    async updateState(id: number): Promise<boolean> {
+      const [result] = await conn.execute<mysql.ResultSetHeader>(
+        "UPDATE users SET is_active = NOT is_active WHERE id = ?",
+        [id]
+      );
+
+      if (result.affectedRows === 0) {
+        throw new Error('User not found');
+      }
+
+      return result.affectedRows > 0;
+    },
+  
   }
 }

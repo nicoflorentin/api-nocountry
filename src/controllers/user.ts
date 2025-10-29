@@ -25,6 +25,21 @@ export const updateUserImage = async (req: Request, res: Response) => {
   }
 };
 
+export const updateState = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid id parameter' });
+    }
+
+    const result = await userService.updateState(id);
+    return res.status(200).json({ result });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     if (!userService) {

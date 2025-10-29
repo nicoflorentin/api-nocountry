@@ -167,7 +167,7 @@ export const updatePatient = async (req: Request, res: Response) => {
 		// 2. Extraer el ID del paciente de la URL
 		const { id } = req.params;
 		// 3. Llamar al servicio para actualizar el paciente
-		const updatedPatient = await getService().updatePatient(id, result.data);
+		const updatedPatient = await getService().updatePatient(id, result.data as PatientUpdate);
 		// 4. Devolver 200 OK con el paciente actualizado
 		return res.status(200).json({ patient: updatedPatient });
 

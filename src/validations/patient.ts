@@ -120,8 +120,8 @@ export const PatientUpdateSchema = z.object({
   firstName: z.string().min(1, { message: "El nombre no puede estar vacio" }).optional(),
   lastName: z.string().min(1, { message: "El apellido no puede estar vacio" }).optional(),
   phone: z.string().optional(),
-  email: z.email({ message: "Email inválido" }).optional(),
-  urlImage: z.string().url("URL de imagen inválida").nullable().optional(), // Asumiendo que urlImage es opcional y puede ser nulo
+  // email: z.email({ message: "Email inválido" }).optional(),
+  // urlImage: z.string().url("URL de imagen inválida").nullable().optional(), // Asumiendo que urlImage es opcional y puede ser nulo
 
   // Campos de la tabla 'patients'
   dateOfBirth: z.preprocess(
@@ -132,66 +132,66 @@ export const PatientUpdateSchema = z.object({
     message: "El sexo debe ser masculino, femenino u otro",
   }).optional(),
   nationality: z.string().min(1, { message: "La nacionalidad no puede estar vacia" }).optional(),
-  typeIdentification: z.enum(["dni", "cc", "ci"], {
-    message: "El tipo de identificación debe ser DNI, CC o CI",
-  }).optional(),
-  identification: z.string().optional(),
-})
-  .superRefine((data, ctx) => {
-    // Validar la identificación solo si el campo está presente.
+  // typeIdentification: z.enum(["dni", "cc", "ci"], {
+  //   message: "El tipo de identificación debe ser DNI, CC o CI",
+  // }).optional(),
+  // identification: z.string().optional(),
+// })
+//   .superRefine((data, ctx) => {
+//     // Validar la identificación solo si el campo está presente.
 
-    const { typeIdentification, identification } = data;
+//     const { typeIdentification, identification } = data;
 
-    // No se puede cambiar el tipo de identificación sin cambiar la identificación.
-    if (typeIdentification && !identification) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["identification"],
-        message: "Debes proporcionar una nueva identificación si cambias el tipo.",
-      });
-      return;
-    }
+//     // No se puede cambiar el tipo de identificación sin cambiar la identificación.
+//     if (typeIdentification && !identification) {
+//       ctx.addIssue({
+//         code: "custom",
+//         path: ["identification"],
+//         message: "Debes proporcionar una nueva identificación si cambias el tipo.",
+//       });
+//       return;
+//     }
 
-    // Si la identificación está presente, aplicar las reglas de formato:
-    if (identification) {
+//     // Si la identificación está presente, aplicar las reglas de formato:
+//     if (identification) {
 
-      const currentType = typeIdentification || 'dni';
+//       const currentType = typeIdentification || 'dni';
 
 
-      if (currentType === "dni") {
-        if (!/^\d{7,12}$/.test(identification)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["identification"],
-            message: "El DNI debe tener entre 7 y 12 dígitos numéricos",
-          });
-        }
-      } else if (currentType === "cc") {
-        if (!/^\d{6,10}$/.test(identification)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["identification"],
-            message: "La CC debe tener entre 6 y 10 dígitos numéricos",
-          });
-        }
-      } else if (currentType === "ci") {
-        if (!/^[A-Za-z0-9]{6,12}$/.test(identification)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["identification"],
-            message:
-              "La CI debe tener entre 6 y 12 caracteres alfanuméricos (letras o números)",
-          });
-        }
-      }
-    }
+//       if (currentType === "dni") {
+//         if (!/^\d{7,12}$/.test(identification)) {
+//           ctx.addIssue({
+//             code: "custom",
+//             path: ["identification"],
+//             message: "El DNI debe tener entre 7 y 12 dígitos numéricos",
+//           });
+//         }
+//       } else if (currentType === "cc") {
+//         if (!/^\d{6,10}$/.test(identification)) {
+//           ctx.addIssue({
+//             code: "custom",
+//             path: ["identification"],
+//             message: "La CC debe tener entre 6 y 10 dígitos numéricos",
+//           });
+//         }
+//       } else if (currentType === "ci") {
+//         if (!/^[A-Za-z0-9]{6,12}$/.test(identification)) {
+//           ctx.addIssue({
+//             code: "custom",
+//             path: ["identification"],
+//             message:
+//               "La CI debe tener entre 6 y 12 caracteres alfanuméricos (letras o números)",
+//           });
+//         }
+//       }
+//     }
 
-    // Asegurarse de que al menos un campo sea proporcionado
-    if (Object.keys(data).length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["body"],
-        message: "Se requiere al menos un campo para actualizar.",
-      });
-    }
+//     // Asegurarse de que al menos un campo sea proporcionado
+//     if (Object.keys(data).length === 0) {
+//       ctx.addIssue({
+//         code: "custom",
+//         path: ["body"],
+//         message: "Se requiere al menos un campo para actualizar.",
+//       });
+//     }
   });

@@ -25,7 +25,7 @@ export async function makeDoctorService() {
 
 		async createDoctor(doctorCreate: DoctorCreate): Promise<UserResponse> {
 			doctorCreate.password = await hashPassword(doctorCreate.password)
-			const user: User | null = await medicRepository.createDoctor(doctorCreate)
+			const user: DoctorResponse | null = await medicRepository.createDoctor(doctorCreate)
 
 			if (!user) {
 				throw new Error("Failed to create user")
@@ -36,7 +36,6 @@ export async function makeDoctorService() {
 				firstName: user.firstName,
 				lastName: user.lastName,
 				email: user.email,
-				phone: user.phone,
 				createdAt: user.createdAt,
 			}
 		},

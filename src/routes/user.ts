@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllUsers, getUserByID, updateUserImage } from "../controllers/user";
+import { getAllUsers, getUserByID, updateState, updateUserImage } from "../controllers/user";
 import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
 
@@ -17,3 +17,4 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 user.post("/update_image", authMiddleware, upload.single("file"), updateUserImage);
+user.put("/:id", updateState);

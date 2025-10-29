@@ -32,7 +32,9 @@ const mapDoctorRowToResponse = (row: any): DoctorResponse => ({
 	licenseNumber: row.license_number,
 	urlImage: row.url_image,
 	isActive: row.is_active,
-	phone: row.phone
+	phone: row.phone,
+	bio: row.bio,
+	specialtyId: row.specialty_id
 });
 
 
@@ -78,7 +80,7 @@ export async function makeDoctorRepository() {
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    s.name as speciality, d.specialty_id, d.license_number, u.url_image, u.is_active, u.phone, d.bio
                     FROM doctors d
                     INNER JOIN users u ON d.user_id = u.id
                     INNER JOIN specialties s ON s.id = d.specialty_id
@@ -110,8 +112,8 @@ export async function makeDoctorRepository() {
 
 				// 1. Insertar USER
 				const [resultUser] = await conn.execute<mysql.ResultSetHeader>(
-					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
-					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.password, role]
+					"INSERT INTO users (first_name, last_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?, ?)",
+					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.phone, doctorCreate.password, role]
 				);
 				const userId = resultUser.insertId;
 
@@ -208,7 +210,7 @@ export async function makeDoctorRepository() {
 
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    s.name as speciality, d.specialty_id, d.license_number, u.url_image, u.is_active, u.phone, d.bio
                     FROM doctors d
                     INNER JOIN users u ON d.user_id = u.id
                     INNER JOIN specialties s ON s.id = d.specialty_id
@@ -238,7 +240,7 @@ export async function makeDoctorRepository() {
 				const searchTerm = `%${name}%`;
 				const [rows] = await conn.execute<mysql.RowDataPacket[]>(
 					`SELECT d.id, u.id as user_id, u.first_name, u.last_name, u.email, u.created_at,
-                    s.name as speciality, d.license_number, u.url_image, u.is_active, u.phone, d.bio
+                    s.name as speciality, d.specialty_id, d.license_number, u.url_image, u.is_active, u.phone, d.bio
                     FROM doctors d
                     INNER JOIN users u ON d.user_id = u.id
                     INNER JOIN specialties s ON s.id = d.specialty_id
@@ -266,10 +268,11 @@ export async function makeDoctorRepository() {
                         u.first_name = ?,
                         u.last_name = ?,
                         d.specialty_id = ?,
-                        d.bio = ?
+                        d.bio = ?,
+												u.phone = ?
                     WHERE
                         d.id = ?`,
-					[doctorUpdate.firstName, doctorUpdate.lastName, doctorUpdate.specialityId, doctorUpdate.bio, doctorUpdate.id]
+					[doctorUpdate.firstName, doctorUpdate.lastName, doctorUpdate.specialityId, doctorUpdate.bio, doctorUpdate.phone, doctorUpdate.id]
 				)
 
 				if (rows.affectedRows === 0) {
@@ -292,8 +295,8 @@ export async function makeDoctorRepository() {
 				await conn.beginTransaction();
 
 				const [result] = await conn.execute<mysql.ResultSetHeader>(
-					"INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)",
-					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, hashedPassword, role]
+					"INSERT INTO users (first_name, last_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?, ?)",
+					[doctorCreate.firstName, doctorCreate.lastName, doctorCreate.email, doctorCreate.phone, hashedPassword, role]
 				);
 
 				const [newUser] = await conn.execute<mysql.RowDataPacket[]>(

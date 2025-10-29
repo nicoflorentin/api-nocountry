@@ -51,14 +51,13 @@ export interface PatientCreateByAdmin {
 }
 
 export interface PatientUpdate {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+  firstName: string;
+  lastName: string;
   phone?: string;
 
-  dateOfBirth?: Date;
-  gender?: 'male' | 'female' | 'other';
-  identification?: string;
-  typeIdentification?: 'dni' | 'cc' | 'ci';
-  nationality?: string;
+  dateOfBirth: Date;
+  gender: 'male' | 'female' | 'other';
+  // identification: string;
+  // typeIdentification: 'dni' | 'cc' | 'ci';
+  nationality: string;
 }

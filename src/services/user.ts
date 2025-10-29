@@ -46,6 +46,11 @@ export async function makeUserService() {
         email: user.email,
         createdAt: user.createdAt
       };
-    }
+    },
+
+    async updateState(id: number): Promise<boolean> {
+      return await userRepository.updateState(id);
+    },
+  
   };
 }

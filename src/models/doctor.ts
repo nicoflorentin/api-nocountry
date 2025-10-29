@@ -32,6 +32,7 @@ export interface DoctorUpdate {
   lastName: string;
   specialityId: number;
   bio?: string;
+  phone?: string;
 }
 
 export interface DoctorResponse {
@@ -45,4 +46,6 @@ export interface DoctorResponse {
   urlImage: string | null;
   isActive: boolean;
   phone: string | null;
+  bio: string | null;
+  specialtyId: number;
 }
