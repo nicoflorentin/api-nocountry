@@ -68,17 +68,18 @@ export async function makeAppointmentRepository(): Promise<AppointmentRepository
         async createAppointment(data: AppointmentCreate): Promise<AppointmentResponse> {
             const conn = await pool.getConnection();
             try {
+
                 const query = `
-                    INSERT INTO appointments
-                    (availability_id, doctor_id, patient_id, day, start_time, end_time, consultation_type)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO appointments
+                (availability_id, doctor_id, patient_id, day, start_time, end_time, consultation_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 `;
                 const values = [
                     data.availability_id, data.doctor_id, data.patient_id,
                     data.day, data.start_time, data.end_time, data.consultation_type
                 ];
                 const [result] = await conn.execute<ResultSetHeader>(query, values);
-
+                
                 const created = await repository.getAppointmentById(result.insertId);
                 if (!created) {
                     throw new Error('Failed to retrieve created appointment.');
