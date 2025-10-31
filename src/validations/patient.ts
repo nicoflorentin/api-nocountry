@@ -84,7 +84,7 @@ export const PatientCreateByAdminSchema = z.object({
   const { typeIdentification, identification } = data;
 
   if (typeIdentification === "dni") {
-    if (!/^\d{7,8}$/.test(identification)) {
+    if (!/^\d{7,12}$/.test(identification)) {
       ctx.addIssue({
         code: "custom", // 👈 obligatorio
         path: ["identification"],
